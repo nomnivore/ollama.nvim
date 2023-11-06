@@ -68,7 +68,13 @@ function M.default_config()
 			},
 
 			Simplify_Code = {
-				prompt = "Simplify the following code. Respond EXACTLY in this format:\n```$ftype\n<your code>\n```\n\n```$ftype\n$sel```",
+				prompt = "Simplify the following $ftype code so that it is both easier to read and understand. Respond EXACTLY in this format:\n```$ftype\n<your code>\n```\n\n```$ftype\n$sel```",
+				action = "replace",
+				input_label = "",
+			},
+
+			Generate_Code = {
+				prompt = "Generate $ftype code that does the following: $input\n\nRespond EXACTLY in this format:\n```$ftype\n<your code>\n```",
 				action = "replace",
 			},
 		},
@@ -206,7 +212,7 @@ function M.prompt(name)
 
 	if opts and opts.stream then
 		---@type Job because we're streaming
-		local job = require("plenary.curl").post(M.config.url .. "/api/generate", {
+		require("plenary.curl").post(M.config.url .. "/api/generate", {
 			body = vim.json.encode({
 				model = model,
 				prompt = parsed_prompt,
@@ -216,23 +222,19 @@ function M.prompt(name)
 		})
 	else
 		-- get response then send to cb
-		local res = require("plenary.curl").post(M.config.url .. "/api/generate", {
+
+		require("plenary.curl").post(M.config.url .. "/api/generate", {
 			body = vim.json.encode({
 				model = model,
 				stream = false,
 				prompt = parsed_prompt,
 			}),
+			callback = function(res)
+				-- not the prettiest, but reuses the stream handler to process the response
+				-- since it comes in the same format.
+				require("ollama.util").handle_stream(cb)(nil, res.body)
+			end,
 		})
-
-		local _, body = pcall(function()
-			return vim.json.decode(res.body)
-		end)
-
-		if type(body) ~= "table" or body.response == nil then
-			vim.api.nvim_notify("body: " .. tostring(body), 2, {})
-			return -- TODO: handle error
-		end
-		cb(body)
 	end
 end
 

@@ -70,7 +70,6 @@ actions.replace = {
 		vim.notify("Sending request...", vim.log.levels.INFO, { title = "Ollama" })
 
 		return function(body)
-			vim.api.nvim_notify("Received response:\n" .. body.response, vim.log.levels.INFO, { title = "Ollama" })
 			local text = body.response:match(prompt.extract)
 
 			if text == nil then
