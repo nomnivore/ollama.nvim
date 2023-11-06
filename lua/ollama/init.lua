@@ -13,12 +13,31 @@ local M = {}
 		$lnum:  The current line number in the buffer
 --]]
 ---@field input_label string? The label to use for an input field
----@field action "display" | "display:float" | "insert" | "replace" | nil How to handle the output (default: display)
+---@field action Ollama.PromptActionBuiltinEnum | Ollama.PromptAction | nil How to handle the output (default: config.action)
 ---@field model string? The model to use for this prompt (default: config.model)
+---@field extract string? A regex to use to extract the output from the response [Insert/Replace] (default: "```$ftype\n(.-)```" )
+
+---Built-in actions
+---@alias Ollama.PromptActionBuiltinEnum "display" | "insert" | "replace"
+
+-- Handles the output of a prompt. Custom Actions can be defined in lieu of a builtin.
+---@alias Ollama.PromptAction table | Ollama.PromptActionFields
+-- The function to call when a response is received from the server
+-- `Job` is passed in when streaming is enabled
+-- TODO: type the data because we can predict the shape
+---@alias Ollama.PromptActionResponseCallback fun(data: table, job: Job?)
+
+---@class Ollama.PromptActionFields
+---@field fn fun(prompt: Ollama.Prompt): Ollama.PromptActionResponseCallback
+---@field opts Ollama.PromptAction.Opts?
+
+---@class Ollama.PromptAction.Opts
+---@field stream? boolean
 
 ---@class Ollama.Config
 ---@field model string? The default model to use
 ---@field prompts table<string, Ollama.Prompt>? A table of prompts to use for each model
+---@field action Ollama.PromptActionBuiltinEnum | Ollama.PromptAction | nil How to handle prompt outputs when not specified by prompt
 ---@field url string? The url to use to connect to the ollama server
 ---@field serve Ollama.Config.Serve? Configuration for the ollama server
 
@@ -28,6 +47,7 @@ local M = {}
 ---@field args string[]? The arguments to pass to the ollama server
 
 function M.default_config()
+	---@type Ollama.Config
 	return {
 		model = "mistral",
 		url = "http://127.0.0.1:11434",
@@ -124,6 +144,8 @@ end
 --- Query the ollama server with the given prompt
 --- Ollama model used is specified in the config and optionally overridden by the prompt
 ---@param name string? The name of the prompt to use
+--- When setting up a keymap, format the rhs like this to properly forward visual selection:
+--- `:<c-u>lua require("ollama").prompt()`
 function M.prompt(name)
 	if not name or name:len() < 1 then
 		show_prompt_picker(M.prompt)
@@ -139,73 +161,44 @@ function M.prompt(name)
 
 	local model = prompt.model or M.config.model
 
-	-- curl and stream in response
-	local tokens = {}
-	local out_buf = vim.api.nvim_create_buf(false, true)
+	-- resolve the action fn based on priority:
+	-- 1. prompt.action (if it exists)
+	-- 2. config.action (if it exists)
+	-- 3. default action (display)
 
-	-- show a rotating spinner while waiting for the response
-	local spinner_chars = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
-	local curr_char = 1
-	local timer = vim.loop.new_timer()
-	timer:start(
-		100,
-		100,
-		vim.schedule_wrap(function()
-			vim.api.nvim_buf_set_lines(out_buf, 0, -1, false, { "Generating... " .. spinner_chars[curr_char], "" })
-			curr_char = curr_char % #spinner_chars + 1
-		end)
-	)
+	-- builtin actions map to the actions.lua module
+
+	local action = prompt.action or M.config.action
+	if action == nil then
+		action = "display"
+	end
+
+	if type(action) == "string" then
+		action = require("ollama.actions")[action]
+	end
+
+	-- TODO: check if action is { fn, opts } or { fn = fn, opts = opts }
+
+	---@cast action Ollama.PromptAction
+
+	local parsed_prompt = parse_prompt(prompt)
+
+	local cb = action.fn(vim.tbl_deep_extend("force", prompt, {
+		model = model,
+		extract = prompt.extract or "```$ftype\n(.-)```",
+	}))
+
+	-- TODO: check if opts.stream is true
 
 	---@type Job because we're streaming
 	local job = require("plenary.curl").post(M.config.url .. "/api/generate", {
 		body = vim.json.encode({
 			model = model,
-			prompt = parse_prompt(prompt),
+			prompt = parsed_prompt,
 			-- TODO: accept options in ollama spec such as temperature, etc
 		}),
-		stream = require("ollama.util").handle_stream(function(body)
-			if timer:is_active() then
-				timer:stop()
-			end
-			table.insert(tokens, body.response)
-			vim.api.nvim_buf_set_lines(out_buf, 0, -1, false, vim.split(table.concat(tokens), "\n"))
-
-			if body.done then
-				vim.api.nvim_set_option_value("modifiable", false, { buf = out_buf })
-			end
-		end),
+		stream = require("ollama.util").handle_stream(cb),
 	})
-
-	if prompt.action == nil or vim.startswith(prompt.action, "display") then
-		-- set some default text to show that the query is loading
-		vim.api.nvim_buf_set_lines(out_buf, 0, -1, false, { "Loading..." })
-
-		local out_win = vim.api.nvim_open_win(out_buf, true, {
-			relative = "editor",
-			width = 160,
-			height = 25,
-			row = 10,
-			col = 10,
-			style = "minimal",
-			border = "rounded",
-			title = M.config.model,
-			title_pos = "center",
-		})
-
-		-- vim.api.nvim_buf_set_name(out_buf, "OllamaOutput")
-		vim.api.nvim_set_option_value("filetype", "markdown", { buf = out_buf })
-		vim.api.nvim_set_option_value("buftype", "nofile", { buf = out_buf })
-		vim.api.nvim_set_option_value("wrap", true, { win = out_win })
-
-		-- set some keybinds for the buffer
-		vim.api.nvim_buf_set_keymap(out_buf, "n", "q", "<cmd>q<cr>", { noremap = true })
-
-		vim.api.nvim_buf_attach(out_buf, false, {
-			on_detach = function()
-				job:shutdown()
-			end,
-		})
-	end
 end
 
 ---@class Ollama.ModelsApiResponseModel
