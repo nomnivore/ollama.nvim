@@ -60,9 +60,54 @@ actions.display = {
 	},
 }
 
-actions.insert = {
+actions.replace = {
 	fn = function(prompt)
-		return function(body) end
+		local sel_start = vim.fn.getpos("'<")
+		local sel_end = vim.fn.getpos("'>")
+		local bufnr = vim.fn.bufnr("%") or 0
+		local mode = vim.fn.visualmode()
+
+		vim.notify("Sending request...", vim.log.levels.INFO, { title = "Ollama" })
+
+		return function(body)
+			vim.api.nvim_notify("Received response:\n" .. body.response, vim.log.levels.INFO, { title = "Ollama" })
+			local text = body.response:match(prompt.extract)
+
+			if text == nil then
+				vim.api.nvim_notify("No match found", vim.log.levels.INFO, { title = "Ollama" })
+				return
+			end
+
+			local lines = vim.split(text, "\n")
+			local start_line, start_col, end_line, end_col
+
+			-- assign positions based on visual or visual-line mode
+			if mode == "v" then
+				start_line = sel_start[2]
+				start_col = sel_start[3]
+				end_line = sel_end[2]
+				end_col = sel_end[3]
+			elseif mode == "V" then
+				start_line = sel_start[2]
+				start_col = 1
+				end_line = sel_end[2]
+				end_col = #vim.fn.getline(sel_end[2]) + 1
+			end
+
+			-- validate and adjust positions
+			if start_line > end_line or (start_line == end_line and start_col > end_col) then
+				start_line, end_line = end_line, start_line
+				start_col, end_col = end_col, start_col
+			end
+
+			-- adjust for 0-based indexing
+			start_line = start_line - 1
+			start_col = start_col - 1
+			end_line = end_line - 1
+			end_col = end_col - 1
+
+			vim.api.nvim_buf_set_text(bufnr, start_line, start_col, end_line, end_col, lines)
+		end
 	end,
 
 	opts = { stream = false },

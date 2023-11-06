@@ -15,7 +15,7 @@ local M = {}
 ---@field input_label string? The label to use for an input field
 ---@field action Ollama.PromptActionBuiltinEnum | Ollama.PromptAction | nil How to handle the output (default: config.action)
 ---@field model string? The model to use for this prompt (default: config.model)
----@field extract string? A regex to use to extract the output from the response [Insert/Replace] (default: "```$ftype\n(.-)```" )
+---@field extract string? A `string.match` pattern to use for an Action to extract the output from the response [Insert/Replace] (default: "```$ftype\n(.-)```" )
 
 ---Built-in actions
 ---@alias Ollama.PromptActionBuiltinEnum "display" | "insert" | "replace"
@@ -28,7 +28,8 @@ local M = {}
 ---@alias Ollama.PromptActionResponseCallback fun(data: table, job: Job?)
 
 ---@class Ollama.PromptActionFields
----@field fn fun(prompt: Ollama.Prompt): Ollama.PromptActionResponseCallback
+-- TODO: type the fn arg table
+---@field fn fun(prompt: table): Ollama.PromptActionResponseCallback
 ---@field opts Ollama.PromptAction.Opts?
 
 ---@class Ollama.PromptAction.Opts
@@ -64,6 +65,11 @@ function M.default_config()
 			Raw = {
 				prompt = "$input",
 				input_label = ">",
+			},
+
+			Simplify_Code = {
+				prompt = "Simplify the following code. Respond EXACTLY in this format:\n```$ftype\n<your code>\n```\n\n```$ftype\n$sel```",
+				action = "replace",
 			},
 		},
 		serve = {
@@ -179,26 +185,55 @@ function M.prompt(name)
 
 	-- TODO: check if action is { fn, opts } or { fn = fn, opts = opts }
 
+	local fn = action[1] or action.fn
+	local opts = action[2] or action.opts
+
 	---@cast action Ollama.PromptAction
 
 	local parsed_prompt = parse_prompt(prompt)
 
-	local cb = action.fn(vim.tbl_deep_extend("force", prompt, {
+	local extract = prompt.extract or "```$ftype\n(.-)```"
+	local parsed_extract = parse_prompt({ prompt = extract })
+
+	-- this can probably be improved
+	local cb = fn({
 		model = model,
-		extract = prompt.extract or "```$ftype\n(.-)```",
-	}))
-
-	-- TODO: check if opts.stream is true
-
-	---@type Job because we're streaming
-	local job = require("plenary.curl").post(M.config.url .. "/api/generate", {
-		body = vim.json.encode({
-			model = model,
-			prompt = parsed_prompt,
-			-- TODO: accept options in ollama spec such as temperature, etc
-		}),
-		stream = require("ollama.util").handle_stream(cb),
+		prompt = prompt.prompt,
+		input_label = prompt.input_label,
+		extract = parsed_extract,
+		action = action,
 	})
+
+	if opts and opts.stream then
+		---@type Job because we're streaming
+		local job = require("plenary.curl").post(M.config.url .. "/api/generate", {
+			body = vim.json.encode({
+				model = model,
+				prompt = parsed_prompt,
+				-- TODO: accept options in ollama spec such as temperature, etc
+			}),
+			stream = require("ollama.util").handle_stream(cb),
+		})
+	else
+		-- get response then send to cb
+		local res = require("plenary.curl").post(M.config.url .. "/api/generate", {
+			body = vim.json.encode({
+				model = model,
+				stream = false,
+				prompt = parsed_prompt,
+			}),
+		})
+
+		local _, body = pcall(function()
+			return vim.json.decode(res.body)
+		end)
+
+		if type(body) ~= "table" or body.response == nil then
+			vim.api.nvim_notify("body: " .. tostring(body), 2, {})
+			return -- TODO: handle error
+		end
+		cb(body)
+	end
 end
 
 ---@class Ollama.ModelsApiResponseModel
@@ -215,7 +250,7 @@ local function query_models()
 	local res = require("plenary.curl").get(M.config.url .. "/api/tags")
 
 	local _, body = pcall(function()
-		return vim.fn.json_decode(res.body)
+		return vim.json.decode(res.body)
 	end)
 
 	if body == nil then
