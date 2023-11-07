@@ -18,7 +18,7 @@ local M = {}
 ---@field extract string? A `string.match` pattern to use for an Action to extract the output from the response [Insert/Replace] (default: "```$ftype\n(.-)```" )
 
 ---Built-in actions
----@alias Ollama.PromptActionBuiltinEnum "display" | "insert" | "replace"
+---@alias Ollama.PromptActionBuiltinEnum "display" | "replace"
 
 -- Handles the output of a prompt. Custom Actions can be defined in lieu of a builtin.
 ---@alias Ollama.PromptAction table | Ollama.PromptActionFields
@@ -45,43 +45,22 @@ local M = {}
 ---@class Ollama.Config.Serve
 ---@field on_start boolean? Whether to start the ollama server on startup
 ---@field command string? The command to use to start the ollama server
----@field args string[]? The arguments to pass to the ollama server
+---@field args string[]? The arguments to pass to the serve command
+---@field stop_command string? The command to use to stop the ollama server
+---@field stop_args string[]? The arguments to pass to the stop command
 
 function M.default_config()
 	---@type Ollama.Config
 	return {
 		model = "mistral",
 		url = "http://127.0.0.1:11434",
-		prompts = {
-			Ask = {
-				prompt = "I have a question: $input",
-				input_label = "Q",
-			},
-
-			Explain_Code = {
-				prompt = "Explain this code:\n```$ftype\n$sel\n```",
-			},
-
-			Raw = {
-				prompt = "$input",
-				input_label = ">",
-			},
-
-			Simplify_Code = {
-				prompt = "Simplify the following $ftype code so that it is both easier to read and understand. Respond EXACTLY in this format:\n```$ftype\n<your code>\n```\n\n```$ftype\n$sel```",
-				action = "replace",
-				input_label = "",
-			},
-
-			Generate_Code = {
-				prompt = "Generate $ftype code that does the following: $input\n\nRespond EXACTLY in this format:\n```$ftype\n<your code>\n```",
-				action = "replace",
-			},
-		},
+		prompts = require("ollama.prompts"),
 		serve = {
 			on_start = false,
 			command = "ollama",
 			args = { "serve" },
+			stop_command = "pkill",
+			stop_args = { "-SIGTERM", "ollama" },
 		},
 	}
 end
@@ -100,7 +79,7 @@ end
 local function parse_prompt(prompt)
 	local text = prompt.prompt
 	if text:find("$input") then
-		local input_prompt = prompt.input_label or "Ollama:"
+		local input_prompt = prompt.input_label or "> "
 		-- add space to end if not there
 		if input_prompt:sub(-1) ~= " " then
 			input_prompt = input_prompt .. " "
@@ -299,19 +278,21 @@ function M.choose_model()
 end
 
 -- Run the ollama server
-function M.run_serve()
+---@param opts? { silent: boolean? }
+function M.run_serve(opts)
+	opts = opts or {}
 	local serve_job = require("plenary.job"):new({
 		command = M.config.serve.command,
 		args = M.config.serve.args,
 		on_exit = function(_, code)
-			if code == 1 then
-				vim.api.nvim_notify(
+			if code == 1 and not opts.silent then
+				vim.schedule_wrap(vim.api.nvim_notify)(
 					"Serve command exited with code 1. Is it already running?",
-					vim.log.levels.ERROR,
+					vim.log.levels.WARN,
 					{ title = "Ollama" }
 				)
-			elseif code == 127 then
-				vim.api.nvim_notify(
+			elseif code == 127 and not opts.silent then
+				vim.schedule_wrap(vim.api.nvim_notify)(
 					"Serve command not found. Is it installed?",
 					vim.log.levels.ERROR,
 					{ title = "Ollama" }
@@ -321,6 +302,39 @@ function M.run_serve()
 	})
 	serve_job:start()
 	-- TODO: can we check if the server started successfully from this job?
+end
+
+-- Stop the ollama server
+---@param opts? { silent: boolean? }
+function M.stop_serve(opts)
+	opts = opts or {}
+	require("plenary.job")
+		:new({
+			command = M.config.serve.stop_command,
+			args = M.config.serve.stop_args,
+			on_exit = function(_, code)
+				if code == 1 and not opts.silent then
+					vim.schedule_wrap(vim.api.nvim_notify)(
+						"Server is already stopped",
+						vim.log.levels.WARN,
+						{ title = "Ollama" }
+					)
+				elseif code == 127 and not opts.silent then
+					vim.schedule_wrap(vim.api.nvim_notify)(
+						"Stop command not found. Is it installed?",
+						vim.log.levels.ERROR,
+						{ title = "Ollama" }
+					)
+				else
+					vim.schedule_wrap(vim.api.nvim_notify)(
+						"Ollama server stopped",
+						vim.log.levels.INFO,
+						{ title = "Ollama" }
+					)
+				end
+			end,
+		})
+		:start()
 end
 
 --- Setup the plugin
@@ -344,6 +358,13 @@ function M.setup(opts)
 	vim.api.nvim_create_user_command("OllamaModel", M.choose_model, {
 		desc = "List and select from available ollama models",
 	})
+
+	vim.api.nvim_create_user_command("OllamaServe", function()
+		M.run_serve()
+	end, { desc = "Start the ollama server" })
+	vim.api.nvim_create_user_command("OllamaServeStop", function()
+		M.stop_serve()
+	end, { desc = "Start the ollama server" })
 
 	if M.config.serve.on_start then
 		M.run_serve()
