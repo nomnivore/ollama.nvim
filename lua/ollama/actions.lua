@@ -8,8 +8,8 @@ actions.display = {
 		-- show a rotating spinner while waiting for the response
 		local timer = require("ollama.util").show_spinner(out_buf)
 
-		local win_width = math.floor(vim.api.nvim_get_option("columns") * 0.8)
-		local win_height = math.floor(vim.api.nvim_get_option("lines") * 0.8)
+		local win_width = math.floor(vim.api.nvim_get_option_value("columns", {}) * 0.8)
+		local win_height = math.floor(vim.api.nvim_get_option_value("lines", {}) * 0.8)
 
 		if win_width > 100 then
 			win_width = 100
@@ -19,8 +19,8 @@ actions.display = {
 			relative = "editor",
 			width = win_width,
 			height = win_height,
-			row = math.floor((vim.api.nvim_get_option("lines") - win_height) / 2),
-			col = math.floor((vim.api.nvim_get_option("columns") - win_width) / 2),
+			row = math.floor((vim.api.nvim_get_option_value("lines", {}) - win_height) / 2),
+			col = math.floor((vim.api.nvim_get_option_value("columns", {}) - win_width) / 2),
 			style = "minimal",
 			border = "rounded",
 			title = prompt.model,
