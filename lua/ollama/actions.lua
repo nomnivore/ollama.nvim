@@ -8,12 +8,19 @@ actions.display = {
 		-- show a rotating spinner while waiting for the response
 		local timer = require("ollama.util").show_spinner(out_buf)
 
+		local win_width = math.floor(vim.api.nvim_get_option("columns") * 0.8)
+		local win_height = math.floor(vim.api.nvim_get_option("lines") * 0.8)
+
+		if win_width > 100 then
+			win_width = 100
+		end
+
 		local out_win = vim.api.nvim_open_win(out_buf, true, {
 			relative = "editor",
-			width = 160,
-			height = 25,
-			row = 10,
-			col = 10,
+			width = win_width,
+			height = win_height,
+			row = math.floor((vim.api.nvim_get_option("lines") - win_height) / 2),
+			col = math.floor((vim.api.nvim_get_option("columns") - win_width) / 2),
 			style = "minimal",
 			border = "rounded",
 			title = prompt.model,
@@ -24,6 +31,7 @@ actions.display = {
 		vim.api.nvim_set_option_value("filetype", "markdown", { buf = out_buf })
 		vim.api.nvim_set_option_value("buftype", "nofile", { buf = out_buf })
 		vim.api.nvim_set_option_value("wrap", true, { win = out_win })
+		vim.api.nvim_set_option_value("linebreak", true, { win = out_win })
 
 		-- set some keybinds for the buffer
 		vim.api.nvim_buf_set_keymap(out_buf, "n", "q", "<cmd>q<cr>", { noremap = true })
