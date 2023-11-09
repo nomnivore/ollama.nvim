@@ -1,6 +1,5 @@
 ---@type table<string, Ollama.PromptAction>
 local actions = {}
-
 actions.display = {
 	fn = function(prompt)
 		local tokens = {}
@@ -38,9 +37,11 @@ actions.display = {
 
 		---@type Job?
 		local job
+		local is_cancelled = false
 		vim.api.nvim_buf_attach(out_buf, false, {
 			on_detach = function()
 				if job ~= nil then
+					is_cancelled = true
 					job:shutdown()
 				end
 			end,
@@ -53,6 +54,9 @@ actions.display = {
 			end
 			if job == nil and _job ~= nil then
 				job = _job
+				if is_cancelled then
+					job:shutdown()
+				end
 			end
 			table.insert(tokens, body.response)
 			vim.api.nvim_buf_set_lines(out_buf, 0, -1, false, vim.split(table.concat(tokens), "\n"))
