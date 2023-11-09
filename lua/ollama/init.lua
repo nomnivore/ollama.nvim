@@ -99,8 +99,8 @@ local function parse_prompt(prompt)
 	end
 
 	if text:find("$sel") then
-		local sel_start = vim.fn.getpos("'<")
-		local sel_end = vim.fn.getpos("'>")
+		local sel_start = vim.fn.getpos("'<") or { 0, 0, 0, 0 }
+		local sel_end = vim.fn.getpos("'>") or { 0, 0, 0, 0 }
 
 		local sel_text = vim.api.nvim_buf_get_text(
 			-- TODO: check if buf exists
