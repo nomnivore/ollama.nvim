@@ -29,7 +29,7 @@ local M = {}
 
 ---@class Ollama.PromptActionFields
 -- TODO: type the fn arg table
----@field fn fun(prompt: table): Ollama.PromptActionResponseCallback
+---@field fn fun(prompt: table): Ollama.PromptActionResponseCallback | false
 ---@field opts Ollama.PromptAction.Opts?
 
 ---@class Ollama.PromptAction.Opts
@@ -188,6 +188,10 @@ function M.prompt(name)
 		extract = parsed_extract,
 		action = action,
 	})
+
+	if cb == false then
+		return
+	end
 
 	if opts and opts.stream then
 		---@type Job because we're streaming
