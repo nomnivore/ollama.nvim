@@ -68,6 +68,31 @@ actions.display = {
 	},
 }
 
+actions.insert = {
+	fn = function(prompt)
+		local bufnr = vim.fn.bufnr("%") or 0
+		local cursorLine = vim.fn.line(".") or 1
+		vim.notify("Sending request...", vim.log.levels.INFO, { title = "Ollama" })
+
+		return function(body)
+			local text = body.response
+			if prompt.extract then
+				text = text:match(prompt.extract)
+			end
+
+			if text == nil then
+				vim.api.nvim_notify("No match found", vim.log.levels.INFO, { title = "Ollama" })
+				return
+			end
+
+			local lines = vim.split(text, "\n")
+			vim.api.nvim_buf_set_lines(bufnr, cursorLine, cursorLine, false, lines)
+		end
+	end,
+
+	opts = { stream = false },
+}
+
 actions.replace = {
 	fn = function(prompt)
 		local sel_start = vim.fn.getpos("'<")
@@ -75,7 +100,19 @@ actions.replace = {
 		local bufnr = vim.fn.bufnr("%") or 0
 		local mode = vim.fn.visualmode()
 
-		vim.notify("Sending request...", vim.log.levels.INFO, { title = "Ollama" })
+		if
+			sel_start == nil
+			or sel_end == nil
+			or sel_start[2] == 0
+			or sel_start[3] == 0
+			or sel_end[2] == 0
+			or sel_end[3] == 0
+		then
+			vim.api.nvim_notify("No selection found", vim.log.levels.INFO, { title = "Ollama" })
+			return false
+		end
+
+		vim.api.nvim_notify("Sending request...", vim.log.levels.INFO, { title = "Ollama" })
 
 		return function(body)
 			local text = body.response
