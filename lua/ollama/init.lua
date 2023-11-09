@@ -37,7 +37,7 @@ local M = {}
 
 ---@class Ollama.Config
 ---@field model string? The default model to use
----@field prompts table<string, Ollama.Prompt>? A table of prompts to use for each model
+---@field prompts table<string, Ollama.Prompt | false>? A table of prompts to use for each model
 ---@field action Ollama.PromptActionBuiltinEnum | Ollama.PromptAction | nil How to handle prompt outputs when not specified by prompt
 ---@field url string? The url to use to connect to the ollama server
 ---@field serve Ollama.Config.Serve? Configuration for the ollama server
@@ -69,8 +69,10 @@ M.config = M.default_config()
 
 local function get_prompts_list()
 	local prompts = {}
-	for name, _ in pairs(M.config.prompts) do
-		table.insert(prompts, name)
+	for name, prompt in pairs(M.config.prompts) do
+		if prompt then
+			table.insert(prompts, name)
+		end
 	end
 	return prompts
 end
@@ -145,7 +147,7 @@ function M.prompt(name)
 	---@cast name string
 
 	local prompt = M.config.prompts[name]
-	if prompt == nil then
+	if prompt == nil or prompt == false then
 		vim.api.nvim_notify(("Prompt '%s' not found"):format(name), vim.log.levels.ERROR, { title = "Ollama" })
 		return
 	end

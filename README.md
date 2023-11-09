@@ -103,6 +103,14 @@ This dictionary accepts the following keys:
 | action      | `string` or `table` (Optional) | The action to take with the response from the LLM. See [Actions](#actions). Defaults to "display".                                 |
 | extract     | `string` (Optional)            | A Lua match pattern to extract from the response. Used only by certain actions. See [Extracting](#extracting).                     |
 
+If you'd like to disable a prompt (such as one of the default ones), set the value of the prompt to `false`.
+
+```lua
+prompts = {
+  Sample_Prompt = false
+}
+```
+
 ### Extracting
 
 When using certain actions (or custom ones you write),
