@@ -67,6 +67,44 @@ end
 
 M.config = M.default_config()
 
+---@alias Ollama.StatusEnum "WORKING" | "IDLE"
+
+local jobs = {}
+local jobs_length = 0
+
+local function update_jobs_length()
+	jobs_length = 0
+	for _, _ in pairs(jobs) do
+		jobs_length = jobs_length + 1
+	end
+end
+
+---@param job Job
+local function add_job(job)
+	jobs[job.pid] = job
+	update_jobs_length()
+end
+
+---@param job Job
+local function del_job(job)
+	jobs[job.pid] = nil
+	update_jobs_length()
+end
+
+function M.cancel_all_jobs()
+	for _, job in ipairs(jobs) do
+		job:shutdown()
+	end
+end
+
+---@type fun(): Ollama.StatusEnum
+function M.status()
+	if jobs_length > 0 then
+		return "WORKING"
+	end
+	return "IDLE"
+end
+
 local function get_prompts_list()
 	local prompts = {}
 	for name, prompt in pairs(M.config.prompts) do
@@ -196,8 +234,7 @@ function M.prompt(name)
 	end
 
 	if opts and opts.stream then
-		---@type Job because we're streaming
-		require("plenary.curl").post(M.config.url .. "/api/generate", {
+		local job = require("plenary.curl").post(M.config.url .. "/api/generate", {
 			body = vim.json.encode({
 				model = model,
 				prompt = parsed_prompt,
@@ -205,10 +242,14 @@ function M.prompt(name)
 			}),
 			stream = require("ollama.util").handle_stream(cb),
 		})
+		job:add_on_exit_callback(del_job)
+		---@cast job Job because we're streaming
+
+		add_job(job)
 	else
 		-- get response then send to cb
 
-		require("plenary.curl").post(M.config.url .. "/api/generate", {
+		local job = require("plenary.curl").post(M.config.url .. "/api/generate", {
 			body = vim.json.encode({
 				model = model,
 				stream = false,
@@ -220,6 +261,9 @@ function M.prompt(name)
 				require("ollama.util").handle_stream(cb)(nil, res.body)
 			end,
 		})
+		job:add_on_exit_callback(del_job)
+
+		add_job(job)
 	end
 end
 

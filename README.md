@@ -29,6 +29,8 @@ methods exposed by the plugin:
 
 ## Installation
 
+`ollama.nvim` uses `curl` to communicate with your ollama server over HTTP. Please ensure that `curl` is installed on your system.
+
 Install using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
@@ -187,6 +189,42 @@ action = {
   end,
   { stream = true }
 }
+```
+
+### Status
+
+`ollama.nvim` module exposes a `.status()` method for checking the status of the ollama server.
+This is used to see if any jobs are currently running. It returns the type
+`Ollama.StatusEnum` which is one of:
+
+- `"IDLE"`: No jobs are running
+- `"WORKING"`: One or more jobs are running
+
+You can use this to display a prompt running status in your statusline.
+Here is an example recipe for [lualine](https://github.com/nvim-lualine/lualine.nvim):
+
+```lua
+{
+  "nvim-lualine/lualine.nvim",
+  optional = true,
+
+  opts = function(_, opts)
+    table.insert(opts.sections.lualine_x, {
+      function()
+        local status = require("ollama").status()
+
+        if status == "IDLE" then
+          return "󱙺" -- nf-md-robot-outline
+        elseif status == "WORKING" then
+          return "󰚩" -- nf-md-robot
+        end
+      end,
+      cond = function()
+        return package.loaded["ollama"] and require("ollama").status() ~= nil
+      end,
+    })
+  end,
+},
 ```
 
 ## Credits
