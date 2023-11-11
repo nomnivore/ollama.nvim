@@ -12,10 +12,12 @@ with custom functionality.
 - [x] Prompt the LLM with context from your buffer
 - [x] Display, replace, or write your own actions for the response
 
+### Planned / Ideas (implemented depending on interest)
+
 - [ ] Specify additional parameters for a prompt (temperature, top_k, etc)
-- [ ] Download and manage models?
-- [ ] Clone or create models from [Modelfiles](https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md)?
-- [ ] Chat??
+- [ ] Download and manage models
+- [ ] Clone or create models from [Modelfiles](https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md)
+- [ ] Chat
 
 ## Usage
 
