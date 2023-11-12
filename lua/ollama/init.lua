@@ -50,7 +50,6 @@ local M = {}
 ---@field stop_args string[]? The arguments to pass to the stop command
 
 function M.default_config()
-	---@type Ollama.Config
 	return {
 		model = "mistral",
 		url = "http://127.0.0.1:11434",
@@ -184,6 +183,7 @@ function M.prompt(name)
 	end
 	---@cast name string
 
+	---@type Ollama.Prompt
 	local prompt = M.config.prompts[name]
 	if prompt == nil or prompt == false then
 		vim.api.nvim_notify(("Prompt '%s' not found"):format(name), vim.log.levels.ERROR, { title = "Ollama" })
@@ -191,7 +191,6 @@ function M.prompt(name)
 	end
 
 	local model = prompt.model or M.config.model
-
 	-- resolve the action fn based on priority:
 	-- 1. prompt.action (if it exists)
 	-- 2. config.action (if it exists)
@@ -212,8 +211,6 @@ function M.prompt(name)
 
 	local fn = action[1] or action.fn
 	local opts = action[2] or action.opts
-
-	---@cast action Ollama.PromptAction
 
 	local parsed_prompt = parse_prompt(prompt)
 
