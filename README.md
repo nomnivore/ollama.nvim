@@ -147,8 +147,14 @@ the prompt string with context in the following ways:
 
 `ollama.nvim` provides the following built-in actions:
 
-- `display`: Display the response in a floating window.
+- `display`: Stream and display the response in a floating window.
 - `replace`: Replace the current selection with the response.
+  - Uses the `extract` pattern to extract the response.
+- `insert`: Insert the response at the current cursor line
+  - Uses the `extract` pattern to extract the response.
+- `display_replace`: Stream and display the response in a floating window, then replace the current selection with the response.
+  - Uses the `extract` pattern to extract the response.
+- `display_insert`: Stream and display the response in a floating window, then insert the response at the current cursor line.
   - Uses the `extract` pattern to extract the response.
 
 Sometimes, you may need functionality that is not provided by
@@ -178,6 +184,10 @@ action = {
   opts = { stream = true } -- optional, default is false
 }
 ```
+
+Instead of returning a callback function, you can also return `false` or `nil`
+to indicate that the prompt should be cancelled and not be sent to the LLM.
+This can be useful for actions that require a selection or for other criteria not being met.
 
 Actions can also be written without the table keys, like so:
 

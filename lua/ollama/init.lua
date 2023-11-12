@@ -29,7 +29,7 @@ local M = {}
 
 ---@class Ollama.PromptActionFields
 -- TODO: type the fn arg table
----@field fn fun(prompt: table): Ollama.PromptActionResponseCallback | false
+---@field fn fun(prompt: table): Ollama.PromptActionResponseCallback | false | nil
 ---@field opts Ollama.PromptAction.Opts?
 
 ---@class Ollama.PromptAction.Opts
@@ -229,7 +229,7 @@ function M.prompt(name)
 		action = action,
 	})
 
-	if cb == false then
+	if not cb then
 		return
 	end
 
