@@ -4,33 +4,9 @@ actions.display = {
 	fn = function(prompt)
 		local tokens = {}
 		local out_buf = vim.api.nvim_create_buf(false, true)
+		require("ollama.util").open_floating_win(out_buf, { title = prompt.model })
 		-- show a rotating spinner while waiting for the response
 		local timer = require("ollama.util").show_spinner(out_buf)
-
-		local win_width = math.floor(vim.api.nvim_get_option_value("columns", {}) * 0.8)
-		local win_height = math.floor(vim.api.nvim_get_option_value("lines", {}) * 0.8)
-
-		if win_width > 100 then
-			win_width = 100
-		end
-
-		local out_win = vim.api.nvim_open_win(out_buf, true, {
-			relative = "editor",
-			width = win_width,
-			height = win_height,
-			row = math.floor((vim.api.nvim_get_option_value("lines", {}) - win_height) / 2),
-			col = math.floor((vim.api.nvim_get_option_value("columns", {}) - win_width) / 2),
-			style = "minimal",
-			border = "rounded",
-			title = prompt.model,
-			title_pos = "center",
-		})
-
-		-- vim.api.nvim_buf_set_name(out_buf, "OllamaOutput")
-		vim.api.nvim_set_option_value("filetype", "markdown", { buf = out_buf })
-		vim.api.nvim_set_option_value("buftype", "nofile", { buf = out_buf })
-		vim.api.nvim_set_option_value("wrap", true, { win = out_win })
-		vim.api.nvim_set_option_value("linebreak", true, { win = out_win })
 
 		-- set some keybinds for the buffer
 		vim.api.nvim_buf_set_keymap(out_buf, "n", "q", "<cmd>q<cr>", { noremap = true })
@@ -99,19 +75,10 @@ actions.insert = {
 
 actions.replace = {
 	fn = function(prompt)
-		local sel_start = vim.fn.getpos("'<")
-		local sel_end = vim.fn.getpos("'>")
 		local bufnr = vim.fn.bufnr("%") or 0
-		local mode = vim.fn.visualmode()
+		local sel_pos = require("ollama.util").get_selection_pos()
 
-		if
-			sel_start == nil
-			or sel_end == nil
-			or sel_start[2] == 0
-			or sel_start[3] == 0
-			or sel_end[2] == 0
-			or sel_end[3] == 0
-		then
+		if sel_pos == nil then
 			vim.api.nvim_notify("No selection found", vim.log.levels.INFO, { title = "Ollama" })
 			return false
 		end
@@ -130,38 +97,152 @@ actions.replace = {
 			end
 
 			local lines = vim.split(text, "\n")
-			local start_line, start_col, end_line, end_col
-
-			-- assign positions based on visual or visual-line mode
-			if mode == "v" then
-				start_line = sel_start[2]
-				start_col = sel_start[3]
-				end_line = sel_end[2]
-				end_col = sel_end[3]
-			elseif mode == "V" then
-				start_line = sel_start[2]
-				start_col = 1
-				end_line = sel_end[2]
-				end_col = #vim.fn.getline(sel_end[2]) + 1
-			end
-
-			-- validate and adjust positions
-			if start_line > end_line or (start_line == end_line and start_col > end_col) then
-				start_line, end_line = end_line, start_line
-				start_col, end_col = end_col, start_col
-			end
-
-			-- adjust for 0-based indexing
-			start_line = start_line - 1
-			start_col = start_col - 1
-			end_line = end_line - 1
-			end_col = end_col - 1
-
+			local start_line, start_col, end_line, end_col = unpack(sel_pos)
 			vim.api.nvim_buf_set_text(bufnr, start_line, start_col, end_line, end_col, lines)
 		end
 	end,
 
 	opts = { stream = false },
+}
+
+-- basically a merge of display -> replace actions
+-- lots of duplicated code
+actions.display_replace = {
+	fn = function(prompt)
+		local bufnr = vim.fn.bufnr("%") or 0
+		local sel_pos = require("ollama.util").get_selection_pos()
+
+		if sel_pos == nil then
+			vim.api.nvim_notify("No selection found", vim.log.levels.INFO, { title = "Ollama" })
+			return false
+		end
+
+		local tokens = {}
+		local out_buf = vim.api.nvim_create_buf(false, true)
+		local out_win = require("ollama.util").open_floating_win(out_buf, { title = prompt.model })
+		-- show a rotating spinner while waiting for the response
+		local timer = require("ollama.util").show_spinner(out_buf)
+
+		-- set some keybinds for the buffer
+		vim.api.nvim_buf_set_keymap(out_buf, "n", "q", "<cmd>q<cr>", { noremap = true })
+
+		---@type Job?
+		local job
+		local is_cancelled = false
+		vim.api.nvim_buf_attach(out_buf, false, {
+			on_detach = function()
+				if job ~= nil then
+					is_cancelled = true
+					job:shutdown()
+				end
+			end,
+		})
+
+		---@type Ollama.PromptActionResponseCallback
+		return function(body, _job)
+			if timer:is_active() then
+				timer:stop()
+			end
+			if job == nil and _job ~= nil then
+				job = _job
+				if is_cancelled then
+					job:shutdown()
+				end
+			end
+			table.insert(tokens, body.response)
+			local lines = vim.split(table.concat(tokens), "\n")
+			vim.api.nvim_buf_set_lines(out_buf, 0, -1, false, lines)
+
+			if body.done then
+				local text = table.concat(lines, "\n")
+				if prompt.extract then
+					text = text:match(prompt.extract)
+				end
+
+				if text == nil then
+					vim.api.nvim_notify("No match found", vim.log.levels.INFO, { title = "Ollama" })
+					return
+				end
+
+				lines = vim.split(text, "\n")
+				local start_line, start_col, end_line, end_col = unpack(sel_pos)
+				vim.api.nvim_buf_set_text(bufnr, start_line, start_col, end_line, end_col, lines)
+
+				-- close the floating window
+				if vim.api.nvim_win_is_valid(out_win) then
+					vim.api.nvim_win_close(out_win, true)
+				end
+			end
+		end
+	end,
+
+	opts = { stream = true },
+}
+
+actions.display_insert = {
+	fn = function(prompt)
+		local bufnr = vim.fn.bufnr("%") or 0
+		local cursorLine = vim.fn.line(".") or 1
+
+		local tokens = {}
+		local out_buf = vim.api.nvim_create_buf(false, true)
+		local out_win = require("ollama.util").open_floating_win(out_buf, { title = prompt.model })
+		-- show a rotating spinner while waiting for the response
+		local timer = require("ollama.util").show_spinner(out_buf)
+
+		-- set some keybinds for the buffer
+		vim.api.nvim_buf_set_keymap(out_buf, "n", "q", "<cmd>q<cr>", { noremap = true })
+
+		---@type Job?
+		local job
+		local is_cancelled = false
+		vim.api.nvim_buf_attach(out_buf, false, {
+			on_detach = function()
+				if job ~= nil then
+					is_cancelled = true
+					job:shutdown()
+				end
+			end,
+		})
+
+		---@type Ollama.PromptActionResponseCallback
+		return function(body, _job)
+			if timer:is_active() then
+				timer:stop()
+			end
+			if job == nil and _job ~= nil then
+				job = _job
+				if is_cancelled then
+					job:shutdown()
+				end
+			end
+			table.insert(tokens, body.response)
+			local lines = vim.split(table.concat(tokens), "\n")
+			vim.api.nvim_buf_set_lines(out_buf, 0, -1, false, lines)
+
+			if body.done then
+				local text = table.concat(lines, "\n")
+				if prompt.extract then
+					text = text:match(prompt.extract)
+				end
+
+				if text == nil then
+					vim.api.nvim_notify("No match found", vim.log.levels.INFO, { title = "Ollama" })
+					return
+				end
+
+				lines = vim.split(text, "\n")
+				vim.api.nvim_buf_set_lines(bufnr, cursorLine, cursorLine, false, lines)
+
+				-- close the floating window
+				if vim.api.nvim_win_is_valid(out_win) then
+					vim.api.nvim_win_close(out_win, true)
+				end
+			end
+		end
+	end,
+
+	opts = { stream = true },
 }
 
 return actions

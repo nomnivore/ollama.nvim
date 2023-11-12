@@ -18,7 +18,7 @@ local M = {}
 ---@field extract string? A `string.match` pattern to use for an Action to extract the output from the response [Insert/Replace] (default: "```$ftype\n(.-)```" )
 
 ---Built-in actions
----@alias Ollama.PromptActionBuiltinEnum "display" | "replace"
+---@alias Ollama.PromptActionBuiltinEnum "display" | "replace" | "insert" | "display_replace" | "display_insert"
 
 -- Handles the output of a prompt. Custom Actions can be defined in lieu of a builtin.
 ---@alias Ollama.PromptAction table | Ollama.PromptActionFields
