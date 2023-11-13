@@ -159,7 +159,14 @@ end
 
 ---@param callback function function to call with the selected prompt name
 local function show_prompt_picker(callback)
-	vim.ui.select(get_prompts_list(), {
+	-- Get the list of prompts and sort them in alphabetical order
+	local prompts = get_prompts_list()
+	table.sort(prompts, function(a, b)
+		return a:gsub("_", " ") < b:gsub("_", " ")
+	end)
+
+	-- Show the prompt picker with the sorted list of prompts
+	vim.ui.select(prompts, {
 		prompt = "Select a prompt:",
 		format_item = function(item)
 			return item:gsub("_", " ")
