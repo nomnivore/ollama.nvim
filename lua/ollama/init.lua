@@ -162,7 +162,7 @@ local function show_prompt_picker(callback)
 	-- Get the list of prompts and sort them in alphabetical order
 	local prompts = get_prompts_list()
 	table.sort(prompts, function(a, b)
-		return a:gsub("_", " ") < b:gsub("_", " ")
+		return a < b
 	end)
 
 	-- Show the prompt picker with the sorted list of prompts
