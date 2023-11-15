@@ -11,10 +11,10 @@ with custom functionality.
 - [x] Query and select from available models
 - [x] Prompt the LLM with context from your buffer
 - [x] Display, replace, or write your own actions for the response
+- [x] Specify additional parameters for a prompt (temperature, top_k, etc)
 
 ### Planned / Ideas (implemented depending on interest)
 
-- [ ] Specify additional parameters for a prompt (temperature, top_k, etc)
 - [ ] Download and manage models
 - [ ] Clone or create models from [Modelfiles](https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md)
 - [ ] Chat
@@ -99,13 +99,16 @@ where you can select which prompt to run, where "Sample_Prompt" is shown as "Sam
 
 This dictionary accepts the following keys:
 
-| Key         | Type                           | Description                                                                                                                        |
-| ----------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| prompt      | `string`                       | The prompt to send to the LLM. Can contain special tokens that are substituted with context before sending. See [Tokens](#tokens). |
-| model       | `string` (Optional)            | The model to use for the prompt. Defaults to the global `opts.model`.                                                              |
-| input_label | `string` (Optional)            | The label to use for the input prompt. Defaults to `"> "`.                                                                         |
-| action      | `string` or `table` (Optional) | The action to take with the response from the LLM. See [Actions](#actions). Defaults to "display".                                 |
-| extract     | `string` (Optional)            | A Lua match pattern to extract from the response. Used only by certain actions. See [Extracting](#extracting).                     |
+| Key         | Type                           | Description                                                                                                                                                                                                    |
+| ----------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| prompt      | `string`                       | The prompt to send to the LLM. Can contain special tokens that are substituted with context before sending. See [Tokens](#tokens).                                                                             |
+| model       | `string` (Optional)            | The model to use for the prompt. Defaults to the global `opts.model`.                                                                                                                                          |
+| input_label | `string` (Optional)            | The label to use for the input prompt. Defaults to `"> "`.                                                                                                                                                     |
+| action      | `string` or `table` (Optional) | The action to take with the response from the LLM. See [Actions](#actions). Defaults to "display".                                                                                                             |
+| extract     | `string` (Optional)            | A Lua match pattern to extract from the response. Used only by certain actions. See [Extracting](#extracting).                                                                                                 |
+| options     | `table` (Optional)             | Additional model parameter overrides, such as temperature, listed in the documentation for the [Ollama Modelfile](https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values) |
+| system      | `string` (Optional)            | The system prompt to be used in the Modelfile template, if applicable. (overrides what's in the Modelfile)                                                                                                     |
+| format      | `string` (Optional)            | The format to return a response in. Currently the only accepted value is "json"                                                                                                                                |
 
 If you'd like to disable a prompt (such as one of the default ones), set the value of the prompt to `false`.
 
