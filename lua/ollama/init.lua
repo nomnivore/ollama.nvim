@@ -15,7 +15,28 @@ local M = {}
 ---@field input_label string? The label to use for an input field
 ---@field action Ollama.PromptActionBuiltinEnum | Ollama.PromptAction | nil How to handle the output (default: config.action)
 ---@field model string? The model to use for this prompt (default: config.model)
----@field extract string? A `string.match` pattern to use for an Action to extract the output from the response [Insert/Replace] (default: "```$ftype\n(.-)```" )
+---@field extract string? A `string.match` pattern to use for an Action to extract the output from the response (Insert/Replace) (default: "```$ftype\n(.-)```" )
+---@field options Ollama.PromptOptions? additional model parameters, such as temperature, listed in the documentation for the [Modelfile](https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)
+
+-- Additional options for the prompt, as defined in `Modelfile` docs
+-- Please check the official documentation for the latest information, as this may be out of date.
+---@class Ollama.PromptOptions
+---@field mirostat integer? Enable Mirostat sampling for controlling perplexity. (default: 0, 0 = disabled, 1 = Mirostat, 2 = Mirostat 2.0)
+---@field mirostat_eta float? Influences how quickly the algorithm responds to feedback from the generated text. A lower learning rate will result in slower adjustments, while a higher learning rate will make the algorithm more responsive. (Default: 0.1)
+---@field mirostat_tau float? Controls the balance between coherence and diversity of the output. A lower value will result in more focused and coherent text. (Default: 5.0)
+---@field num_ctx integer? Sets the size of the context window used to generate the next token. (Default: 2048)
+---@field num_gqa integer? The number of GQA groups in the transformer layer. Required for some models, for example, it is 8 for llama2:70b.
+---@field num_gpu integer? The number of layers to send to the GPU(s). On macOS, it defaults to 1 to enable metal support, 0 to disable.
+---@field num_thread integer? Sets the number of threads to use during computation. By default, Ollama will detect this for optimal performance. It is recommended to set this value to the number of physical CPU cores your system has (as opposed to the logical number of cores).
+---@field repeat_last_n integer? Sets how far back for the model to look back to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)
+---@field repeat_penalty float? Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)
+---@field temperature float? The temperature of the model. Increasing the temperature will make the model answer more creatively. (Default: 0.8)
+---@field seed integer? Sets the random number seed to use for generation. Setting this to a specific number will make the model generate the same text for the same prompt. (Default: 0)
+---@field stop string? Sets the stop sequences to use. When this pattern is encountered, the LLM will stop generating text and return. Multiple stop patterns may be set by specifying multiple separate stop parameters in a modelfile.
+---@field tfs_z float? Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting. (Default: 1)
+---@field num_predict integer? Maximum number of tokens to predict when generating text. (Default: 128, -1 = infinite generation, -2 = fill context)
+---@field top_k integer? Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)
+---@field top_p float? Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)
 
 ---Built-in actions
 ---@alias Ollama.PromptActionBuiltinEnum "display" | "replace" | "insert" | "display_replace" | "display_insert"
@@ -244,6 +265,7 @@ function M.prompt(name)
 			prompt = parsed_prompt,
 			stream = stream,
 			-- TODO: accept options in ollama spec such as temperature, etc
+			options = prompt.options,
 		}),
 		stream = function(_, chunk, job)
 			if stream then
