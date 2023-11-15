@@ -17,6 +17,8 @@ local M = {}
 ---@field model string? The model to use for this prompt (default: config.model)
 ---@field extract string? A `string.match` pattern to use for an Action to extract the output from the response (Insert/Replace) (default: "```$ftype\n(.-)```" )
 ---@field options Ollama.PromptOptions? additional model parameters, such as temperature, listed in the documentation for the [Modelfile](https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)
+---@field system string? The SYSTEM instruction specifies the system prompt to be used in the Modelfile template, if applicable. (overrides what's in the Modelfile)
+---@field format "json"? the format to return a response in. Currently the only accepted value is json
 
 -- Additional options for the prompt, as defined in `Modelfile` docs
 -- Please check the official documentation for the latest information, as this may be out of date.
@@ -264,7 +266,8 @@ function M.prompt(name)
 			model = model,
 			prompt = parsed_prompt,
 			stream = stream,
-			-- TODO: accept options in ollama spec such as temperature, etc
+			system = prompt.system,
+			format = prompt.format,
 			options = prompt.options,
 		}),
 		stream = function(_, chunk, job)
