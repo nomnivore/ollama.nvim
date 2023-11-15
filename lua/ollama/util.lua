@@ -9,6 +9,9 @@ function util.handle_stream(cb)
 				return vim.json.decode(chunk)
 			end)
 			if type(body) ~= "table" or body.response == nil then
+				if body.error ~= nil then
+					vim.api.nvim_notify("Error: " .. body.error, vim.log.levels.ERROR, { title = "Ollama" })
+				end
 				return
 			end
 			cb(body, job)

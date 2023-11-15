@@ -207,8 +207,6 @@ function M.prompt(name)
 		action = require("ollama.actions")[action]
 	end
 
-	-- TODO: check if action is { fn, opts } or { fn = fn, opts = opts }
-
 	local fn = action[1] or action.fn
 	local opts = action[2] or action.opts
 
@@ -230,38 +228,48 @@ function M.prompt(name)
 		return
 	end
 
-	if opts and opts.stream then
-		local job = require("plenary.curl").post(M.config.url .. "/api/generate", {
-			body = vim.json.encode({
-				model = model,
-				prompt = parsed_prompt,
-				-- TODO: accept options in ollama spec such as temperature, etc
-			}),
-			stream = require("ollama.util").handle_stream(cb),
-		})
-		job:add_on_exit_callback(del_job)
-		---@cast job Job because we're streaming
+	local stream = opts and opts.stream or false
+	local stream_called = false
 
-		add_job(job)
-	else
-		-- get response then send to cb
+	local job = require("plenary.curl").post(M.config.url .. "/api/generate", {
+		body = vim.json.encode({
+			model = model,
+			prompt = parsed_prompt,
+			stream = stream,
+			-- TODO: accept options in ollama spec such as temperature, etc
+		}),
+		stream = function(_, chunk, job)
+			if stream then
+				stream_called = true
+				require("ollama.util").handle_stream(cb)(_, chunk, job)
+			end
+		end,
+	})
+	---@param j Job
+	job:add_on_exit_callback(function(j)
+		if stream_called then
+			return
+		end
 
-		local job = require("plenary.curl").post(M.config.url .. "/api/generate", {
-			body = vim.json.encode({
-				model = model,
-				stream = false,
-				prompt = parsed_prompt,
-			}),
-			callback = function(res)
-				-- not the prettiest, but reuses the stream handler to process the response
-				-- since it comes in the same format.
-				require("ollama.util").handle_stream(cb)(nil, res.body)
-			end,
-		})
-		job:add_on_exit_callback(del_job)
+		if j.code ~= 0 then
+			vim.schedule_wrap(vim.api.nvim_notify)(
+				("Connection error (Code %s)"):format(tostring(j.code)),
+				vim.log.levels.ERROR,
+				{ title = "Ollama" }
+			)
+			return
+		end
 
-		add_job(job)
-	end
+		-- not the prettiest, but reuses the stream handler to process the response
+		-- since it comes in the same format.
+		require("ollama.util").handle_stream(cb)(nil, j:result()[1])
+
+		-- if res.body is like { error = "..." } then it should
+		-- be handled in the handle_stream method
+	end)
+	job:add_on_exit_callback(del_job)
+
+	add_job(job)
 end
 
 ---@class Ollama.ModelsApiResponseModel
@@ -332,13 +340,19 @@ function M.run_serve(opts)
 		command = M.config.serve.command,
 		args = M.config.serve.args,
 		on_exit = function(_, code)
-			if code == 1 and not opts.silent then
+			if opts.silent then
+				return
+			end
+			-- 1 = `ollama serve` already running
+			-- 125 = docker name conflict (already running)
+			-- `docker start` returns 0 if already running, not sure how to catch that case
+			if code == 1 or code == 125 then
 				vim.schedule_wrap(vim.api.nvim_notify)(
 					"Serve command exited with code 1. Is it already running?",
 					vim.log.levels.WARN,
 					{ title = "Ollama" }
 				)
-			elseif code == 127 and not opts.silent then
+			elseif code == 127 then
 				vim.schedule_wrap(vim.api.nvim_notify)(
 					"Serve command not found. Is it installed?",
 					vim.log.levels.ERROR,
