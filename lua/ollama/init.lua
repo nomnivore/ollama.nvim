@@ -15,7 +15,7 @@ local M = {}
 ---@field input_label string? The label to use for an input field
 ---@field action Ollama.PromptActionBuiltinEnum | Ollama.PromptAction | nil How to handle the output (default: config.action)
 ---@field model string? The model to use for this prompt (default: config.model)
----@field extract string? A `string.match` pattern to use for an Action to extract the output from the response (Insert/Replace) (default: "```$ftype\n(.-)```" )
+---@field extract string | false | nil A `string.match` pattern to use for an Action to extract the output from the response (Insert/Replace) (default: "```$ftype\n(.-)```" )
 ---@field options Ollama.PromptOptions? additional model parameters, such as temperature, listed in the documentation for the [Modelfile](https://github.com/jmorganca/ollama/blob/main/docs/modelfile.md#valid-parameters-and-values)
 ---@field system string? The SYSTEM instruction specifies the system prompt to be used in the Modelfile template, if applicable. (overrides what's in the Modelfile)
 ---@field format "json"? the format to return a response in. Currently the only accepted value is json
@@ -242,8 +242,14 @@ function M.prompt(name)
 
 	local parsed_prompt = parse_prompt(prompt)
 
-	local extract = prompt.extract or "```$ftype\n(.-)```"
-	local parsed_extract = parse_prompt({ prompt = extract })
+	local extract = prompt.extract
+	if extract == nil then
+		extract = "```$ftype\n(.-)```"
+	end
+	local parsed_extract = nil
+	if extract then
+		parsed_extract = parse_prompt({ prompt = extract })
+	end
 
 	-- this can probably be improved
 	local cb = fn({
