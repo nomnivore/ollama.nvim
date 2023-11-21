@@ -171,11 +171,12 @@ local function parse_prompt(prompt)
 			sel_start[2] - 1,
 			sel_start[3] - 1,
 			sel_end[2] - 1,
-			sel_end[3] - 1,
+			sel_end[3],  -- end_col is exclusive
 			{}
 		)
 		text = text:gsub("$sel", table.concat(sel_text, "\n"))
 	end
+  print(text)
 
 	return text
 end
