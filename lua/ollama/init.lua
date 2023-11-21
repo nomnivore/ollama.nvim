@@ -176,7 +176,6 @@ local function parse_prompt(prompt)
 		)
 		text = text:gsub("$sel", table.concat(sel_text, "\n"))
 	end
-  print(text)
 
 	return text
 end
