@@ -164,6 +164,12 @@ local function parse_prompt(prompt)
 		local sel_start = vim.fn.getpos("'<") or { 0, 0, 0, 0 }
 		local sel_end = vim.fn.getpos("'>") or { 0, 0, 0, 0 }
 
+		-- address inconsistencies between visual and visual line mode
+		local mode = vim.fn.visualmode()
+		if mode == "V" then
+			sel_end[3] = sel_end[3] - 1
+		end
+
 		local sel_text = vim.api.nvim_buf_get_text(
 			-- TODO: check if buf exists
 			---@diagnostic disable-next-line: param-type-mismatch
@@ -171,7 +177,7 @@ local function parse_prompt(prompt)
 			sel_start[2] - 1,
 			sel_start[3] - 1,
 			sel_end[2] - 1,
-			sel_end[3],  -- end_col is exclusive
+			sel_end[3], -- end_col is exclusive
 			{}
 		)
 		text = text:gsub("$sel", table.concat(sel_text, "\n"))
