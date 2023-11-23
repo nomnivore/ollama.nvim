@@ -245,4 +245,53 @@ actions.display_insert = {
 	opts = { stream = true },
 }
 
+actions.display_prompt = {
+	fn = function(prompt)
+		local display_prompt = prompt.input_label .. " " .. prompt.parsed_prompt
+		local tokens = { display_prompt .. "\n\n" }
+		local out_buf = vim.api.nvim_create_buf(false, true)
+		require("ollama.util").open_floating_win(out_buf, { title = prompt.model })
+		-- show a rotating spinner while waiting for the response
+		local timer = require("ollama.util").show_spinner(out_buf, display_prompt)
+
+		-- set some keybinds for the buffer
+		vim.api.nvim_buf_set_keymap(out_buf, "n", "q", "<cmd>q<cr>", { noremap = true })
+
+		---@type Job?
+		local job
+		local is_cancelled = false
+		vim.api.nvim_buf_attach(out_buf, false, {
+			on_detach = function()
+				if job ~= nil then
+					is_cancelled = true
+					job:shutdown()
+				end
+			end,
+		})
+
+		---@type Ollama.PromptActionResponseCallback
+		return function(body, _job)
+			if timer:is_active() then
+				timer:stop()
+			end
+			if job == nil and _job ~= nil then
+				job = _job
+				if is_cancelled then
+					job:shutdown()
+				end
+			end
+			table.insert(tokens, body.response)
+			vim.api.nvim_buf_set_lines(out_buf, 0, -1, false, vim.split(table.concat(tokens), "\n"))
+
+			if body.done then
+				vim.api.nvim_set_option_value("modifiable", false, { buf = out_buf })
+			end
+		end
+	end,
+
+	opts = {
+		stream = true,
+	},
+}
+
 return actions

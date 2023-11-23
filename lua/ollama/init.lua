@@ -264,6 +264,7 @@ function M.prompt(name)
 		input_label = prompt.input_label,
 		extract = parsed_extract,
 		action = action,
+		parsed_prompt = parsed_prompt,
 	})
 
 	if not cb then

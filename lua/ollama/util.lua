@@ -21,8 +21,9 @@ end
 
 -- Show a spinner in the given buffer (overwrites existing lines)
 ---@param bufnr number The buffer to show the spinner in
+---@param display_prompt string The prompt to display before the spinner (optional)
 ---@return uv_timer_t timer The timer object for rotating the spinner
-function util.show_spinner(bufnr)
+function util.show_spinner(bufnr, display_prompt)
 	local spinner_chars = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
 	local curr_char = 1
 	local timer = vim.loop.new_timer()
@@ -30,7 +31,13 @@ function util.show_spinner(bufnr)
 		100,
 		100,
 		vim.schedule_wrap(function()
-			vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Generating... " .. spinner_chars[curr_char], "" })
+			local replacement_string = {}
+			if display_prompt == nil then
+				replacement_string = { "Generating... " .. spinner_chars[curr_char], "" }
+			else
+				replacement_string = { display_prompt , "", "", "Generating... " .. spinner_chars[curr_char], "" }
+			end
+			vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, replacement_string)
 			curr_char = curr_char % #spinner_chars + 1
 		end)
 	)

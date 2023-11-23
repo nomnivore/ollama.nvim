@@ -14,6 +14,7 @@ local prompts = {
 	Raw = {
 		prompt = "$input",
 		input_label = ">",
+		action = "display_prompt",
 	},
 
 	Simplify_Code = {
