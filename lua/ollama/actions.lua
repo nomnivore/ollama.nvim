@@ -247,7 +247,8 @@ actions.display_insert = {
 
 actions.display_prompt = {
 	fn = function(prompt)
-		local display_prompt = prompt.input_label .. " " .. prompt.parsed_prompt
+		local input_label = prompt.input_label or "> "
+		local display_prompt = input_label .. " " .. prompt.parsed_prompt .. "\n\n"
 		local tokens = { display_prompt .. "\n\n" }
 		local out_buf = vim.api.nvim_create_buf(false, true)
 		require("ollama.util").open_floating_win(out_buf, { title = prompt.model })
