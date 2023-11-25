@@ -53,7 +53,7 @@ return {
       desc = "ollama prompt",
       mode = { "n", "v" },
     },
-    
+
     -- Sample keybind for direct prompting. Note that the <c-u> is important for selections to work properly.
     {
       "<leader>oG",
@@ -169,7 +169,7 @@ the prompt string with context in the following ways:
   - Uses the `extract` pattern to extract the response.
 - `display_insert`: Stream and display the response in a floating window, then insert the response at the current cursor line.
   - Uses the `extract` pattern to extract the response.
-- `display_prompt`: Append the parsed prompt and stream and display the response in a floating window.
+- `display_prompt`: Display the parsed prompt and stream and display the response below in a floating window.
 
 Sometimes, you may need functionality that is not provided by
 the built-in actions. In this case, you can write your own Custom Actions with the following interface:
