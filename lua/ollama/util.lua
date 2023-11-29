@@ -20,9 +20,9 @@ function util.handle_stream(cb)
 end
 
 ---@class Ollama.Util.ShowSpinnerOptions
----@field start_ln number The line to start the spinner at
----@field end_ln number The line to end the spinner at
----@field format string The format string to use for the spinner line
+---@field start_ln number? The line to start the spinner at
+---@field end_ln number? The line to end the spinner at
+---@field format string? The format string to use for the spinner line
 
 -- Show a spinner in the given buffer (overwrites existing lines)
 ---@param bufnr number The buffer to show the spinner in
