@@ -287,13 +287,9 @@ actions.display_prompt = {
 			if body.done then
 				timer:stop()
 				timer:stop()
-				vim.api.nvim_buf_set_lines(
-					out_buf,
-					#pre_lines,
-					#pre_lines + 1,
-					false,
-					{ ("> Done: %ss."):format(require("ollama.util").nano_to_seconds(body.total_duration)) }
-				)
+				vim.api.nvim_buf_set_lines(out_buf, #pre_lines, #pre_lines + 1, false, {
+					("> %s in %ss."):format(prompt.model, require("ollama.util").nano_to_seconds(body.total_duration)),
+				})
 				vim.api.nvim_set_option_value("modifiable", false, { buf = out_buf })
 			end
 		end
