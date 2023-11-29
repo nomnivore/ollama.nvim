@@ -19,18 +19,32 @@ function util.handle_stream(cb)
 	end
 end
 
+---@class Ollama.Util.ShowSpinnerOptions
+---@field start_ln number? The line to start the spinner at
+---@field end_ln number? The line to end the spinner at
+---@field format string? The format string to use for the spinner line
+
 -- Show a spinner in the given buffer (overwrites existing lines)
 ---@param bufnr number The buffer to show the spinner in
+---@param opts Ollama.Util.ShowSpinnerOptions? Additional options for the spinner
 ---@return uv_timer_t timer The timer object for rotating the spinner
-function util.show_spinner(bufnr)
+function util.show_spinner(bufnr, opts)
+	opts = opts or {}
+	opts = vim.tbl_deep_extend("force", {
+		start_ln = 0,
+		end_ln = -1,
+		format = "> Generating... %s",
+	}, opts)
 	local spinner_chars = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" }
 	local curr_char = 1
+	local spinner_lines = {}
 	local timer = vim.loop.new_timer()
 	timer:start(
 		100,
 		100,
 		vim.schedule_wrap(function()
-			vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Generating... " .. spinner_chars[curr_char], "" })
+			spinner_lines = vim.split(opts.format:format(spinner_chars[curr_char]), "\n")
+			vim.api.nvim_buf_set_lines(bufnr, opts.start_ln, opts.end_ln, false, spinner_lines)
 			curr_char = curr_char % #spinner_chars + 1
 		end)
 	)
@@ -123,6 +137,11 @@ function util.get_selection_pos()
 	end_col = end_col - 1
 
 	return { start_line, start_col, end_line, end_col }
+end
+
+--- Convert a nanosecond value to seconds.
+function util.nano_to_seconds(nano)
+	return nano / 1000000000
 end
 
 return util

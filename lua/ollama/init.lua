@@ -41,7 +41,7 @@ local M = {}
 ---@field top_p float? Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)
 
 ---Built-in actions
----@alias Ollama.PromptActionBuiltinEnum "display" | "replace" | "insert" | "display_replace" | "display_insert"
+---@alias Ollama.PromptActionBuiltinEnum "display" | "replace" | "insert" | "display_replace" | "display_insert" | "display_prompt"
 
 -- Handles the output of a prompt. Custom Actions can be defined in lieu of a builtin.
 ---@alias Ollama.PromptAction table | Ollama.PromptActionFields
@@ -264,6 +264,7 @@ function M.prompt(name)
 		input_label = prompt.input_label,
 		extract = parsed_extract,
 		action = action,
+		parsed_prompt = parsed_prompt,
 	})
 
 	if not cb then
