@@ -99,6 +99,41 @@ opts = {
 }
 ```
 
+### Docker
+
+Due to `ollama.nvim`'s flexible configuration, docker support is included with minimal extra effort.
+
+If your container is running on a **separate machine**, you just need to configure the `url` option to point
+to your server.
+
+For **local containers**, you can configure the `serve` options to use the `docker` cli to create and destroy a container.
+Here's an example configuration that uses the official `ollama` docker image to create an ephemeral container with a shared volume:
+
+```lua
+opts = {
+  -- $ docker run -d --rm --gpus=all -v <volume>:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
+  url = "http://127.0.0.1:11434",
+  serve = {
+    command = "docker",
+    args = {
+      "run",
+      "-d",
+      "--rm",
+      "--gpus=all",
+      "-v",
+      "ollama:/root/.ollama",
+      "-p",
+      "11434:11434",
+      "--name",
+      "ollama",
+      "ollama/ollama",
+    },
+    stop_command = "docker",
+    stop_args = { "stop", "ollama" },
+  },
+}
+```
+
 ### Writing your own prompts
 
 By default, `ollama.nvim` comes with a few prompts that are useful for most workflows.
