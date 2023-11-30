@@ -256,6 +256,8 @@ actions.display_prompt = {
 		vim.api.nvim_buf_set_lines(out_buf, 0, -1, false, pre_lines)
 		-- show a rotating spinner while waiting for the response
 		local timer = require("ollama.util").show_spinner(out_buf, { start_ln = #pre_lines, end_ln = #pre_lines + 1 }) -- the +1 makes sure the old spinner is replaced
+		-- empty line so that the response lands in the right place
+		vim.api.nvim_buf_set_lines(out_buf, -1, -1, false, { "" })
 
 		-- set some keybinds for the buffer
 		vim.api.nvim_buf_set_keymap(out_buf, "n", "q", "<cmd>q<cr>", { noremap = true })
@@ -285,7 +287,6 @@ actions.display_prompt = {
 			vim.api.nvim_buf_set_lines(out_buf, #pre_lines + 2, -1, false, vim.split(table.concat(tokens), "\n"))
 
 			if body.done then
-				timer:stop()
 				timer:stop()
 				vim.api.nvim_buf_set_lines(out_buf, #pre_lines, #pre_lines + 1, false, {
 					("> %s in %ss."):format(prompt.model, require("ollama.util").nano_to_seconds(body.total_duration)),
