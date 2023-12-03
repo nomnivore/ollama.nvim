@@ -35,6 +35,13 @@ local prompts = {
 		prompt = "Generate $ftype code that does the following: $input\n\n" .. response_format,
 		action = "insert",
 	},
+  Chat = {
+    prompt = "$buf\n",
+    -- input_label = ">",
+    action = "chat",
+    extract = false,
+    -- model = model_lang,
+  },
 }
 
 return prompts

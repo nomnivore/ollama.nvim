@@ -317,6 +317,31 @@ function M.prompt(name)
 	add_job(job)
 end
 
+--- create new chat buffer and window
+function M.create_chat()
+  local out_buf = vim.api.nvim_create_buf(true, false)  -- create a normal buffer
+  local out_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_set_current_buf(out_buf)
+  vim.api.nvim_buf_set_name(out_buf, "/tmp/ollama-chat.md")
+  vim.api.nvim_set_option_value("filetype", "markdown", { buf = out_buf })
+  -- vim.api.nvim_set_option_value("buftype", "nofile", { buf = out_buf })
+  vim.api.nvim_set_option_value("wrap", true, { win = out_win })
+  vim.api.nvim_set_option_value("linebreak", true, { win = out_win })
+  local pre_text = [[
+You are an AI agent called Ollama that is helping the User with his queries.
+The User enters their prompts after lines beginning with '> User'.
+Your answers start at lines beginning with '> Ollama'.
+You should output only responses and not the special sequences '> User' and '> Ollama'.
+
+> User
+]]
+  local pre_lines = vim.split(pre_text, "\n")
+  vim.api.nvim_buf_set_lines(out_buf, 0, -1, false, pre_lines)
+  vim.api.nvim_win_set_cursor(0, { #pre_lines, 0 })
+  vim.cmd [[w!]]  --overwrite file if exists TODO manage chats in an ollama folder
+  vim.api.nvim_buf_set_keymap(out_buf, "n", "q", "<cmd>bd!<cr>", { noremap = true })
+end
+
 ---@class Ollama.ModelsApiResponseModel
 ---@field name string
 ---@field modified_at string
