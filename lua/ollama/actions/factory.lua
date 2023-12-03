@@ -66,8 +66,8 @@ function factory.build(opts)
 				out_win = require("ollama.util").open_floating_win(out_buf, { title = prompt.model })
 				timer = require("ollama.util").show_spinner(out_buf, { start_ln = #pre_lines, end_ln = #pre_lines + 1 }) -- the +1 makes sure the old spinner is replaced
 
-				-- empty line so that the response lands in the right place
-				vim.api.nvim_buf_set_lines(out_buf, -1, -1, false, { "" })
+				-- empty lines as padding so that the response lands in the right place
+				vim.api.nvim_buf_set_lines(out_buf, -1, -1, false, { "", "" })
 
 				-- set some keybinds for the buffer
 				vim.api.nvim_buf_set_keymap(out_buf, "n", "q", "<cmd>q<cr>", { noremap = true })
