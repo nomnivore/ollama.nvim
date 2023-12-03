@@ -2,10 +2,10 @@ local factory = {}
 
 ---@class Ollama.ActionFactoryBuildOpts
 ---@field display boolean? whether to display the response (default: true)
----@field insert boolean? whether to insert the response (default: false)
+---@field insert boolean? whether to insert the response at the cursor (default: false)
 ---@field replace boolean? whether to replace the selection with the response. Precedes `insert` (default: false)
----@field show_prompt boolean? whether to show the prompt (default: false)
----@field window "float" | "split" | "vsplit" | nil type of window to display the response in (default: "float")
+---@field show_prompt boolean? whether to prepend the display buffer with the parsed prompt (default: false)
+---@field window "float" | "split" | "vsplit" | nil type of window to display the response in (default: "float") (NOT YET IMPLEMENTED)
 
 ---@type Ollama.ActionFactoryBuildOpts
 local default_opts = {
@@ -17,7 +17,7 @@ local default_opts = {
 }
 
 ---@param opts Ollama.ActionFactoryBuildOpts
-function factory.build(opts)
+function factory.create_action(opts)
 	-- prepare for the ugliest most deeply nested if statements you've ever seen
 	-- I'm so sorry
 
@@ -63,7 +63,20 @@ function factory.build(opts)
 				pre_lines = vim.split(display_prompt, "\n")
 				vim.api.nvim_buf_set_lines(out_buf, 0, -1, false, pre_lines)
 
-				out_win = require("ollama.util").open_floating_win(out_buf, { title = prompt.model })
+				if opts.window == "float" then
+					out_win = require("ollama.util").open_floating_win(out_buf, { title = prompt.model })
+				elseif opts.window == "split" then
+					vim.cmd("split")
+					out_win = vim.api.nvim_get_current_win()
+					require("ollama.util").set_output_options(out_buf, out_win)
+					vim.api.nvim_win_set_buf(out_win, out_buf)
+				elseif opts.window == "vsplit" then
+					vim.cmd("vsplit")
+					out_win = vim.api.nvim_get_current_win()
+					require("ollama.util").set_output_options(out_buf, out_win)
+					vim.api.nvim_win_set_buf(out_win, out_buf)
+				end
+
 				timer = require("ollama.util").show_spinner(out_buf, { start_ln = #pre_lines, end_ln = #pre_lines + 1 }) -- the +1 makes sure the old spinner is replaced
 
 				-- empty lines as padding so that the response lands in the right place

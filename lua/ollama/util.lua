@@ -52,6 +52,13 @@ function util.show_spinner(bufnr, opts)
 	return timer
 end
 
+function util.set_output_options(bufnr, winnr)
+	vim.api.nvim_set_option_value("filetype", "markdown", { buf = bufnr })
+	vim.api.nvim_set_option_value("buftype", "nofile", { buf = bufnr })
+	vim.api.nvim_set_option_value("wrap", true, { win = winnr })
+	vim.api.nvim_set_option_value("linebreak", true, { win = winnr })
+end
+
 -- Opens a floating window with a new buffer, returning the buffer and window IDs.
 ---@param bufnr number The buffer to show in the window
 ---@param win_opts table Window option overrides to pass to nvim_open_win
@@ -80,11 +87,7 @@ function util.open_floating_win(bufnr, win_opts)
 		}, win_opts)
 	)
 
-	-- vim.api.nvim_buf_set_name(out_buf, "OllamaOutput")
-	vim.api.nvim_set_option_value("filetype", "markdown", { buf = bufnr })
-	vim.api.nvim_set_option_value("buftype", "nofile", { buf = bufnr })
-	vim.api.nvim_set_option_value("wrap", true, { win = out_win })
-	vim.api.nvim_set_option_value("linebreak", true, { win = out_win })
+	util.set_output_options(bufnr, out_win)
 
 	return out_win
 end
