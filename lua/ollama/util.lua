@@ -121,7 +121,7 @@ function util.get_selection_pos()
 		start_line = sel_start[2]
 		start_col = 1
 		end_line = sel_end[2]
-		end_col = #vim.fn.getline(sel_end[2]) + 1
+		end_col = #vim.fn.getline(sel_end[2])
 	end
 
 	-- validate and adjust positions
@@ -134,7 +134,7 @@ function util.get_selection_pos()
 	start_line = start_line - 1
 	start_col = start_col - 1
 	end_line = end_line - 1
-	end_col = end_col - 1
+	end_col = end_col -- end_col is exclusive
 
 	return { start_line, start_col, end_line, end_col }
 end
