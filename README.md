@@ -204,7 +204,6 @@ the prompt string with context in the following ways:
   - Uses the `extract` pattern to extract the response.
 - `display_insert`: Stream and display the response in a floating window, then insert the response at the current cursor line.
   - Uses the `extract` pattern to extract the response.
-- `display_prompt`: Display the parsed prompt and stream and display the response below in a floating window.
 
 Sometimes, you may need functionality that is not provided by
 the built-in actions. In this case, you can write your own Custom Actions with the following interface:
@@ -251,6 +250,25 @@ action = {
   { stream = true }
 }
 ```
+
+#### Actions Factory
+
+The built-in actions are implemented using a factory function that takes a table of options and returns a prompt action.
+You can use this factory to quickly make small adjustments to the built-in actions.
+
+```lua
+action = require("ollama.actions.factory").create_action({ display = true, replace = true, show_prompt = false })
+```
+
+The following options are available:
+
+| Option      | Type                         | Description                                                                              |
+| ----------- | ---------------------------- | ---------------------------------------------------------------------------------------- |
+| display     | `boolean`                    | whether to display the response (default: `true`)                                        |
+| insert      | `boolean`                    | whether to insert the response at the cursor (default: `false`)                          |
+| replace     | `boolean`                    | whether to replace the selection with the response. Precedes `insert` (default: `false`) |
+| show_prompt | `boolean`                    | whether to prepend the display buffer with the parsed prompt (default: `false`)          |
+| window      | `"float"\|"split"\|"vsplit"` | type of window to display the response in (default: `"float"`)                           |
 
 ### Status
 
