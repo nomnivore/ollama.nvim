@@ -74,9 +74,10 @@ local M = {}
 
 function M.default_config()
 	return {
-		model = "mistral",
+    model = "mistral",
+    model_code = "codellama",
 		url = "http://127.0.0.1:11434",
-		prompts = require("ollama.prompts"),
+		prompts = {},  -- generated in setup
 		serve = {
 			on_start = false,
 			command = "ollama",
@@ -448,6 +449,9 @@ end
 function M.setup(opts)
 	---@diagnostic disable-next-line: assign-type-mismatch
 	M.config = vim.tbl_deep_extend("force", M.config, opts or {})
+  M.config.prompts = require("ollama.prompts").generate_prompts(
+    M.config.model, M.config.model_code
+  )
 
 	-- add command
 	vim.api.nvim_create_user_command("Ollama", function(arg)
