@@ -272,83 +272,24 @@ function M.prompt(name)
 	end
 
 	local stream = opts and opts.stream or false
-	local stream_called = false
 
-	local job = require("plenary.curl").post(M.config.url .. "/api/generate", {
-		body = vim.json.encode({
-			model = model,
-			prompt = parsed_prompt,
-			stream = stream,
-			system = prompt.system,
-			format = prompt.format,
-			options = prompt.options,
-		}),
-		stream = function(_, chunk, job)
-			if stream then
-				stream_called = true
-				require("ollama.util").handle_stream(cb)(_, chunk, job)
-			end
-		end,
-	})
-	---@param j Job
-	job:add_on_exit_callback(function(j)
-		if stream_called then
-			return
-		end
+	local job = require("ollama.api").generate(M.config.url, {
+		model = model,
+		prompt = parsed_prompt,
+		stream = stream,
+		system = prompt.system,
+		format = prompt.format,
+		options = prompt.options,
+	}, cb)
 
-		if j.code ~= 0 then
-			vim.schedule_wrap(vim.api.nvim_notify)(
-				("Connection error (Code %s)"):format(tostring(j.code)),
-				vim.log.levels.ERROR,
-				{ title = "Ollama" }
-			)
-			return
-		end
-
-		-- not the prettiest, but reuses the stream handler to process the response
-		-- since it comes in the same format.
-		require("ollama.util").handle_stream(cb)(nil, j:result()[1])
-
-		-- if res.body is like { error = "..." } then it should
-		-- be handled in the handle_stream method
-	end)
 	job:add_on_exit_callback(del_job)
 
 	add_job(job)
 end
 
----@class Ollama.ModelsApiResponseModel
----@field name string
----@field modified_at string
----@field size number
----@field digest string
-
----@class Ollama.ModelsApiResponse
----@field models Ollama.ModelsApiResponseModel[]
-
--- Query the ollama server for available models
-local function query_models()
-	local res = require("plenary.curl").get(M.config.url .. "/api/tags")
-
-	local _, body = pcall(function()
-		return vim.json.decode(res.body)
-	end)
-
-	if body == nil then
-		return {}
-	end
-
-	local models = {}
-	for _, model in pairs(body.models) do
-		table.insert(models, model.name)
-	end
-
-	return models
-end
-
 -- Method for choosing models
 function M.choose_model()
-	local models = query_models()
+	local models = require("ollama.api").list_models(M.config.url)
 
 	if #models < 1 then
 		vim.api.nvim_notify(
