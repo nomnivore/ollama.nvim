@@ -3,7 +3,7 @@
     "library": {
       "enabled": true,
       // plenary
-      "plugins": ["plenary.nvim"]
+      "plugins": ["plenary.nvim", "nui.nvim"]
     }
   }
 }
