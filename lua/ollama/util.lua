@@ -8,7 +8,7 @@ function util.handle_stream(cb)
 			local _, body = pcall(function()
 				return vim.json.decode(chunk)
 			end)
-			if type(body) ~= "table" or body.response == nil then
+			if type(body) ~= "table" then
 				if body.error ~= nil then
 					vim.api.nvim_notify("Error: " .. body.error, vim.log.levels.ERROR, { title = "Ollama" })
 				end

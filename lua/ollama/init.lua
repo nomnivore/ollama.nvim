@@ -413,6 +413,10 @@ function M.setup(opts)
 		M.stop_serve()
 	end, { desc = "Start the ollama server" })
 
+	vim.api.nvim_create_user_command("OllamaChat", function()
+		require("ollama.chat").open_or_toggle()
+	end, { desc = "Open/Hide the chat window" })
+
 	if M.config.serve.on_start then
 		M.run_serve()
 	end
