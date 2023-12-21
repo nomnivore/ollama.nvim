@@ -283,27 +283,39 @@ You can use this to display a prompt running status in your statusline.
 Here is an example recipe for [lualine](https://github.com/nvim-lualine/lualine.nvim):
 
 ```lua
+-- install the plugin via
 {
   "nvim-lualine/lualine.nvim",
-  optional = true,
-
-  opts = function(_, opts)
-    table.insert(opts.sections.lualine_x, {
-      function()
-        local status = require("ollama").status()
-
-        if status == "IDLE" then
-          return "󱙺" -- nf-md-robot-outline
-        elseif status == "WORKING" then
-          return "󰚩" -- nf-md-robot
-        end
-      end,
-      cond = function()
-        return package.loaded["ollama"] and require("ollama").status() ~= nil
-      end,
-    })
-  end,
 },
+
+-- Define a function to check that ollama is installed and working
+local function get_condition()
+    return package.loaded["ollama"] and require("ollama").status ~= nil
+end
+
+
+-- Define a function to check the status and return the corresponding icon
+local function get_status_icon()
+  local status = require("ollama").status()
+
+  if status == "IDLE" then
+    return "OLLAMA IDLE"
+  elseif status == "WORKING" then
+    return "OLLAMA BUSY"
+  end
+end
+
+-- Load and configure 'lualine'
+require("lualine").setup({
+	sections = {
+		lualine_a = {},
+		lualine_b = { "branch", "diff", "diagnostics" },
+		lualine_c = { { "filename", path = 1 } },
+		lualine_x = { get_status_icon, get_condition }, -- Pass both functions separately
+		lualine_y = { "progress" },
+		lualine_z = { "location" },
+	},
+})
 ```
 
 ## Credits
