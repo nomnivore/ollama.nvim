@@ -280,7 +280,10 @@ This is used to see if any jobs are currently running. It returns the type
 - `"WORKING"`: One or more jobs are running
 
 You can use this to display a prompt running status in your statusline.
-Here is an example recipe for [lualine](https://github.com/nvim-lualine/lualine.nvim):
+Here are a few example recipes for [lualine](https://github.com/nvim-lualine/lualine.nvim):
+
+
+#### Assuming you already have lualine set up in your config, and that you are using a package manager that can merge configs
 
 ```lua
 {
@@ -304,6 +307,44 @@ Here is an example recipe for [lualine](https://github.com/nvim-lualine/lualine.
     })
   end,
 },
+```
+
+#### Alternatively, Assuming you want all of the statusline config entries in one file.
+
+```lua
+-- assuming the following plugin is installed
+{
+  "nvim-lualine/lualine.nvim",
+},
+
+-- Define a function to check that ollama is installed and working
+local function get_condition()
+    return package.loaded["ollama"] and require("ollama").status ~= nil
+end
+
+
+-- Define a function to check the status and return the corresponding icon
+local function get_status_icon()
+  local status = require("ollama").status()
+
+  if status == "IDLE" then
+    return "OLLAMA IDLE"
+  elseif status == "WORKING" then
+    return "OLLAMA BUSY"
+  end
+end
+
+-- Load and configure 'lualine'
+require("lualine").setup({
+	sections = {
+		lualine_a = {},
+		lualine_b = { "branch", "diff", "diagnostics" },
+		lualine_c = { { "filename", path = 1 } },
+		lualine_x = { get_status_icon, get_condition },
+		lualine_y = { "progress" },
+		lualine_z = { "location" },
+	},
+})
 ```
 
 ## Credits
