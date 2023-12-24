@@ -4,16 +4,27 @@ local Popup = require("nui.popup")
 local Layout = require("nui.layout")
 local object = require("nui.object")
 
+-- TODO: add functionality to save/load sessions (model/paramter info and chat history) in temp files
+-- either under session storage or a temp/configurable directory
+-- files can be named by timestamp by default
+
 ---@class ChatUi
+-- constructor
 ---@field new fun(): ChatUi
+-- views/ui
+---@field views table<string, NuiLayout.Box>
 ---@field layout NuiLayout
 ---@field output NuiPopup
 ---@field input NuiPopup
+---@field session_list NuiPopup
+-- state
 ---@field is_open boolean
+-- methods
 ---@field show fun()
 ---@field hide fun()
 ---@field close fun()
 ---@field toggle fun(): boolean
+---@field open_session_list fun()
 ---@field send_message fun()
 local ChatUi = object("ChatUi")
 
@@ -57,20 +68,62 @@ function ChatUi.init(self)
 		},
 	})
 
-	-- get total width of neovim window
-	local ui_width = vim.fn.winwidth
-
-	self.layout = Layout(
-		{
-			relative = "editor",
-			size = { height = "80%", width = 95 },
-			position = "50%",
+	self.session_list = Popup({
+		border = {
+			style = "rounded",
+			text = {
+				top = "Sessions",
+				top_align = "center",
+			},
 		},
-		Layout.Box({
+		buf_options = {
+			buftype = "nofile",
+			filetype = "markdown",
+		},
+		win_options = {
+			wrap = true,
+			linebreak = true,
+		},
+	})
+
+	-- populate session menu with fake data
+	-- vim.api.nvim_buf_set_lines(self.session_list.bufnr, 0, -1, false, {
+	-- 	"2023-01-01 12:00:00",
+	-- 	"2023-01-01 15:22:54",
+	-- 	"2023-02-15 08:45:30",
+	-- 	"2023-03-05 18:30:12",
+	-- 	"2023-04-10 10:12:45",
+	-- 	"2023-05-20 14:55:21",
+	-- 	"2023-06-08 22:17:33",
+	-- 	"2023-07-03 16:40:09",
+	-- 	"2023-08-12 09:28:56",
+	-- 	"2023-09-25 20:03:40",
+	-- 	"2023-10-18 11:50:25",
+	-- 	"2023-11-30 19:14:08",
+	-- 	"2023-12-15 13:36:42",
+	-- })
+
+	self.views = {
+		main = Layout.Box({
 			Layout.Box(self.output, { grow = 1 }),
 			Layout.Box(self.input, { size = { height = 8 } }),
-		}, { dir = "col" })
-	)
+		}, { dir = "col", grow = 1 }),
+
+		with_sessions = Layout.Box({
+			Layout.Box({
+				Layout.Box(self.output, { grow = 1 }),
+				Layout.Box(self.input, { size = { height = 8 } }),
+			}, { dir = "col", grow = 1 }),
+
+			Layout.Box(self.session_list, { size = { width = 25 } }),
+		}, { dir = "row" }),
+	}
+
+	self.layout = Layout({
+		relative = "editor",
+		size = { height = "80%", width = 95 },
+		position = "50%",
+	}, self.views.main)
 
 	self.input:map("n", "<Tab>", function()
 		vim.api.nvim_set_current_win(self.output.winid)
@@ -79,22 +132,22 @@ function ChatUi.init(self)
 		vim.api.nvim_set_current_win(self.input.winid)
 	end)
 
+	self.input:map("n", "<S-Tab>", function()
+		self.open_session_list()
+	end)
+
 	self.input:map("n", "<CR>", function()
 		self:send_message()
 	end)
-
 	self.is_open = false
 
 	self.hide = function()
 		self.layout:hide()
-		self.input:hide()
-		self.output:hide()
 		self.is_open = false
 	end
 	self.show = function()
+		self.layout:update(self.views.main)
 		self.layout:show()
-		self.input:show()
-		self.output:show()
 		self.is_open = true
 	end
 
@@ -111,6 +164,10 @@ function ChatUi.init(self)
 	self.close = function()
 		vim.inspect(self)
 		self.layout:unmount()
+	end
+
+	self.open_session_list = function()
+		self.layout:update(self.views.with_sessions)
 	end
 
 	-- hacking together a quick proof-of-concept
@@ -235,6 +292,12 @@ function Chat.close()
 	if chatui ~= nil then
 		chatui:close()
 		chatui = nil
+	end
+end
+
+function Chat.toggle_session_list()
+	if chatui ~= nil then
+		chatui.open_session_list()
 	end
 end
 
