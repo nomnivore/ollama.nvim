@@ -79,6 +79,7 @@ To get a fuzzy-finding Telescope prompt selector you can optionally install [`st
 ```lua
 opts = {
   model = "mistral",
+  model_code = "codellama",
   url = "http://127.0.0.1:11434",
   serve = {
     on_start = false,
@@ -98,6 +99,7 @@ opts = {
   }
 }
 ```
+The model `model_code` will be used with the built-in prompts concerning code, e.g. `Explain Code`. To use the default `model` for the code prompts as well, set this to an empty string, i.e. `model_code = ""`.
 
 ### Docker
 
