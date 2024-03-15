@@ -183,6 +183,17 @@ local function parse_prompt(prompt)
 		text = text:gsub("$sel", table.concat(sel_text, "\n"))
 	end
 
+	if text:find("$to_cursor") then
+		local cursor_loc = vim.api.nvim_win_get_cursor(0)
+		-- get the lines for the current buffer, up to the cursor
+		lines = vim.api.nvim_buf_get_lines(0, 0, cursor_loc[1], false)
+		lines[#lines] = string.sub(lines[#lines], 0, cursor_loc[2]+1)
+		
+		complete = table.concat(lines, "\n")
+		-- remove last \n char
+		return string.sub(complete, 0, -1)
+	end
+
 	return text
 end
 
