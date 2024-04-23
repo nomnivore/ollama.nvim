@@ -37,7 +37,7 @@ Install using [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
 return {
-  "nomnivore/ollama.nvim",
+  "yamsergey/ollama.nvim",
   dependencies = {
     "nvim-lua/plenary.nvim",
   },
