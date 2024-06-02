@@ -172,17 +172,20 @@ local function parse_prompt(prompt)
 			sel_end[3] = sel_end[3] - 1
 		end
 
-		local sel_text = vim.api.nvim_buf_get_text(
-			-- TODO: check if buf exists
-			---@diagnostic disable-next-line: param-type-mismatch
-			vim.fn.bufnr("%"),
-			sel_start[2] - 1,
-			sel_start[3] - 1,
-			sel_end[2] - 1,
-			sel_end[3], -- end_col is exclusive
-			{}
-		)
-		text = text:gsub("$sel", table.concat(sel_text, "\n"))
+		local buf_nr = vim.fn.bufnr("%")
+
+		if buf_nr ~= -1 then
+			local sel_text = vim.api.nvim_buf_get_text(
+				---@diagnostic disable-next-line: param-type-mismatch
+				buf_nr,
+				sel_start[2] - 1,
+				sel_start[3] - 1,
+				sel_end[2] - 1,
+				sel_end[3], -- end_col is exclusive
+				{}
+			)
+			text = text:gsub("$sel", table.concat(sel_text, "\n"))
+		end
 	end
 
 	return text
