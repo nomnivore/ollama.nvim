@@ -140,7 +140,9 @@ end
 ---@param prompt Ollama.Prompt
 local function parse_prompt(prompt)
 	local text = prompt.prompt
-	if text:find("$input") then
+	local original_text = text
+
+	if original_text:find("$input") then
 		local input_prompt = prompt.input_label or "> "
 		-- add space to end if not there
 		if input_prompt:sub(-1) ~= " " then
@@ -155,12 +157,13 @@ local function parse_prompt(prompt)
 	text = text:gsub("$line", vim.fn.getline("."))
 	text = text:gsub("$lnum", tostring(vim.fn.line(".")))
 
-	if text:find("$buf") then
-		local buf_text = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-		text = text:gsub("$buf", table.concat(buf_text, "\n"))
+	local buf_text = nil
+	if original_text:find("$buf") then
+		buf_text = table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")
 	end
 
-	if text:find("$sel") then
+	local sel_text = nil
+	if original_text:find("$sel") then
 		local sel_start = vim.fn.getpos("'<") or { 0, 0, 0, 0 }
 		local sel_end = vim.fn.getpos("'>") or { 0, 0, 0, 0 }
 
@@ -170,20 +173,31 @@ local function parse_prompt(prompt)
 			sel_end[3] = sel_end[3] - 1
 		end
 
-		local sel_text = vim.api.nvim_buf_get_text(
-			-- TODO: check if buf exists
-			---@diagnostic disable-next-line: param-type-mismatch
-			vim.fn.bufnr("%"),
-			sel_start[2] - 1,
-			sel_start[3] - 1,
-			sel_end[2] - 1,
-			sel_end[3], -- end_col is exclusive
-			{}
-		)
-		text = text:gsub("$sel", table.concat(sel_text, "\n"))
+		local buf_nr = vim.fn.bufnr("%")
+
+		if buf_nr ~= -1 then
+			local sel_buf_text = vim.api.nvim_buf_get_text(
+				---@diagnostic disable-next-line: param-type-mismatch
+				buf_nr,
+				sel_start[2] - 1,
+				sel_start[3] - 1,
+				sel_end[2] - 1,
+				sel_end[3], -- end_col is exclusive
+				{}
+			)
+			sel_text = table.concat(sel_buf_text, "\n")
+		else
+			sel_text = "No Buffer Found"
+		end
 	end
 
-	return text
+	local sel_split_data = vim.split(text, "$sel", { trimempty = true })
+	local output = {}
+	for _, value in ipairs(sel_split_data) do
+		table.insert(output, table.concat(vim.split(value, "$buf", { trimempty = true }), buf_text))
+	end
+
+	return table.concat(output, sel_text)
 end
 
 ---@param callback function function to call with the selected prompt name
