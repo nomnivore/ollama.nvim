@@ -140,7 +140,9 @@ end
 ---@param prompt Ollama.Prompt
 local function parse_prompt(prompt)
 	local text = prompt.prompt
-	if text:find("$input") then
+	local original_text = text
+
+	if original_text:find("$input") then
 		local input_prompt = prompt.input_label or "> "
 		-- add space to end if not there
 		if input_prompt:sub(-1) ~= " " then
@@ -155,12 +157,12 @@ local function parse_prompt(prompt)
 	text = text:gsub("$line", vim.fn.getline("."))
 	text = text:gsub("$lnum", tostring(vim.fn.line(".")))
 
-	if text:find("$buf") then
+	if original_text:find("$buf") then
 		local buf_text = vim.api.nvim_buf_get_lines(0, 0, -1, false)
 		text = text:gsub("$buf", table.concat(buf_text, "\n"))
 	end
 
-	if text:find("$sel") then
+	if original_text:find("$sel") then
 		local sel_start = vim.fn.getpos("'<") or { 0, 0, 0, 0 }
 		local sel_end = vim.fn.getpos("'>") or { 0, 0, 0, 0 }
 
