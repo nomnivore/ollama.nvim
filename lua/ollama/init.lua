@@ -157,11 +157,12 @@ local function parse_prompt(prompt)
 	text = text:gsub("$line", vim.fn.getline("."))
 	text = text:gsub("$lnum", tostring(vim.fn.line(".")))
 
+	local buf_text = nil
 	if original_text:find("$buf") then
-		local buf_text = vim.api.nvim_buf_get_lines(0, 0, -1, false)
-		text = text:gsub("$buf", table.concat(buf_text, "\n"))
+		buf_text = table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")
 	end
 
+	local sel_text = nil
 	if original_text:find("$sel") then
 		local sel_start = vim.fn.getpos("'<") or { 0, 0, 0, 0 }
 		local sel_end = vim.fn.getpos("'>") or { 0, 0, 0, 0 }
@@ -175,7 +176,7 @@ local function parse_prompt(prompt)
 		local buf_nr = vim.fn.bufnr("%")
 
 		if buf_nr ~= -1 then
-			local sel_text = vim.api.nvim_buf_get_text(
+			local sel_buf_text = vim.api.nvim_buf_get_text(
 				---@diagnostic disable-next-line: param-type-mismatch
 				buf_nr,
 				sel_start[2] - 1,
@@ -184,11 +185,19 @@ local function parse_prompt(prompt)
 				sel_end[3], -- end_col is exclusive
 				{}
 			)
-			text = text:gsub("$sel", table.concat(sel_text, "\n"))
+			sel_text = table.concat(sel_buf_text, "\n")
+		else
+			sel_text = "No Buffer Found"
 		end
 	end
 
-	return text
+	local sel_split_data = vim.split(text, "$sel", { trimempty = true })
+	local output = {}
+	for _, value in ipairs(sel_split_data) do
+		table.insert(output, table.concat(vim.split(value, "$buf", { trimempty = true }), buf_text))
+	end
+
+	return table.concat(output, sel_text)
 end
 
 ---@param callback function function to call with the selected prompt name
