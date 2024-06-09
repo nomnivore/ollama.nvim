@@ -181,15 +181,17 @@ will then be sent to the action associated with the prompt.
 Before sending the prompt, `ollama.nvim` will replace certain special tokens in
 the prompt string with context in the following ways:
 
-| Token  | Description                              |
-| ------ | ---------------------------------------- |
-| $input | Prompt the user for input.               |
-| $sel   | The current or previous selection.       |
-| $ftype | The filetype of the current buffer.      |
-| $fname | The filename of the current buffer.      |
-| $buf   | The full contents of the current buffer. |
-| $line  | The current line in the buffer.          |
-| $lnum  | The current line number in the buffer.   |
+| Token   | Description                                            |
+| ------- | ------------------------------------------------------ |
+| $input  | Prompt the user for input.                             |
+| $sel    | The current or previous selection.                     |
+| $ftype  | The filetype of the current buffer.                    |
+| $fname  | The filename of the current buffer.                    |
+| $buf    | The full contents of the current buffer.               |
+| $before | The contents of the current buffer, before the pointer |
+| $after  | The contents of the current buffer, after the pointer  |
+| $line   | The current line in the buffer.                        |
+| $lnum   | The current line number in the buffer.                 |
 
 ### Actions
 

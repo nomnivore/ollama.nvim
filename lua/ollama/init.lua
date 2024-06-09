@@ -139,65 +139,96 @@ end
 
 ---@param prompt Ollama.Prompt
 local function parse_prompt(prompt)
-	local text = prompt.prompt
-	local original_text = text
+    local text = prompt.prompt
+    local original_text = text
 
-	if original_text:find("$input") then
-		local input_prompt = prompt.input_label or "> "
-		-- add space to end if not there
-		if input_prompt:sub(-1) ~= " " then
-			input_prompt = input_prompt .. " "
-		end
+    if original_text:find("$input") then
+        local input_prompt = prompt.input_label or "> "
+        -- add space to end if not there
+        if input_prompt:sub(-1) ~= " " then
+            input_prompt = input_prompt .. " "
+        end
 
-		text = text:gsub("$input", vim.fn.input(input_prompt))
-	end
+        text = text:gsub("$input", vim.fn.input(input_prompt))
+    end
 
-	text = text:gsub("$ftype", vim.bo.filetype)
-	text = text:gsub("$fname", vim.fn.expand("%:t"))
-	text = text:gsub("$line", vim.fn.getline("."))
-	text = text:gsub("$lnum", tostring(vim.fn.line(".")))
+    text = text:gsub("$ftype", vim.bo.filetype)
+    text = text:gsub("$fname", vim.fn.expand("%:t"))
+    text = text:gsub("$line", vim.fn.getline("."))
+    text = text:gsub("$lnum", tostring(vim.fn.line(".")))
 
-	local buf_text = nil
-	if original_text:find("$buf") then
-		buf_text = table.concat(vim.api.nvim_buf_get_lines(0, 0, -1, false), "\n")
-	end
+    local buf_text = nil
+    local before_text = nil
+    local after_text = nil
+    local has_buf = original_text:find("$buf")
+    local has_before = original_text:find("$before")
+    local has_after = original_text:find("$after")
+    if has_buf or has_before or has_after then
+        local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+        buf_text = table.concat(lines, "\n")
 
-	local sel_text = nil
-	if original_text:find("$sel") then
-		local sel_start = vim.fn.getpos("'<") or { 0, 0, 0, 0 }
-		local sel_end = vim.fn.getpos("'>") or { 0, 0, 0, 0 }
+        local row, column = unpack(vim.api.nvim_win_get_cursor(0))
+        local before_lines = {}
+        local after_lines = {}
+        for i, line in ipairs(lines) do
+            if i < row then
+                table.insert(before_lines, line)
+            elseif i > row then
+                table.insert(after_lines, line)
+            else
+                table.insert(before_lines, line:sub(1, column - 1))
+                table.insert(after_lines, line:sub(column))
+            end
+        end
 
-		-- address inconsistencies between visual and visual line mode
-		local mode = vim.fn.visualmode()
-		if mode == "V" then
-			sel_end[3] = sel_end[3] - 1
-		end
+        before_text = table.concat(before_lines, "\n")
+        after_text = table.concat(after_lines, "\n")
+    end
 
-		local buf_nr = vim.fn.bufnr("%")
+    local sel_text = nil
+    if original_text:find("$sel") then
+        local sel_start = vim.fn.getpos("'<") or { 0, 0, 0, 0 }
+        local sel_end = vim.fn.getpos("'>") or { 0, 0, 0, 0 }
 
-		if buf_nr ~= -1 then
-			local sel_buf_text = vim.api.nvim_buf_get_text(
-				---@diagnostic disable-next-line: param-type-mismatch
-				buf_nr,
-				sel_start[2] - 1,
-				sel_start[3] - 1,
-				sel_end[2] - 1,
-				sel_end[3], -- end_col is exclusive
-				{}
-			)
-			sel_text = table.concat(sel_buf_text, "\n")
-		else
-			sel_text = "No Buffer Found"
-		end
-	end
+        -- address inconsistencies between visual and visual line mode
+        local mode = vim.fn.visualmode()
+        if mode == "V" then
+            sel_end[3] = sel_end[3] - 1
+        end
 
-	local sel_split_data = vim.split(text, "$sel", { trimempty = true })
-	local output = {}
-	for _, value in ipairs(sel_split_data) do
-		table.insert(output, table.concat(vim.split(value, "$buf", { trimempty = true }), buf_text))
-	end
+        local buf_nr = vim.fn.bufnr("%")
 
-	return table.concat(output, sel_text)
+        if buf_nr ~= -1 then
+            local sel_buf_text = vim.api.nvim_buf_get_text(
+            ---@diagnostic disable-next-line: param-type-mismatch
+                buf_nr,
+                sel_start[2] - 1,
+                sel_start[3] - 1,
+                sel_end[2] - 1,
+                sel_end[3], -- end_col is exclusive
+                {}
+            )
+            sel_text = table.concat(sel_buf_text, "\n")
+        else
+            sel_text = "No Buffer Found"
+        end
+    end
+
+    local function replace_selector(match)
+        if match == "$buf" then
+            return buf_text
+        elseif match == "$sel" then
+            return sel_text
+        elseif match == "$before" then
+            return before_text
+        elseif match == "$after" then
+            return after_text
+        else
+            return match
+        end
+    end
+
+    return text:gsub("(%$[%w_]+)", replace_selector)
 end
 
 ---@param callback function function to call with the selected prompt name
