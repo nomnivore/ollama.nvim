@@ -142,7 +142,8 @@ function factory.create_action(opts)
 
 						if opts.replace then
 							local start_line, start_col, end_line, end_col = unpack(sel_pos)
-							vim.api.nvim_buf_set_text(bufnr, start_line, start_col, end_line, end_col, lines)
+							vim.api.nvim_buf_set_lines(bufnr, start_line, end_line, false, {})
+							vim.api.nvim_buf_set_lines(bufnr, start_line, start_line, false, lines)							
 						elseif opts.insert then
 							vim.api.nvim_buf_set_lines(bufnr, cursorLine, cursorLine, false, lines)
 						end
