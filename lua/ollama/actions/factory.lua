@@ -8,7 +8,7 @@ local factory = {}
 ---@field window "float" | "split" | "vsplit" | nil type of window to display the response in (default: "float") (NOT YET IMPLEMENTED)
 
 ---@type Ollama.ActionFactoryBuildOpts
-local default_opts = {
+factory.default_opts = {
 	display = true,
 	insert = false,
 	replace = false,
@@ -21,7 +21,7 @@ function factory.create_action(opts)
 	-- prepare for the ugliest most deeply nested if statements you've ever seen
 	-- I'm so sorry
 
-	opts = vim.tbl_extend("force", default_opts, opts or {})
+	opts = vim.tbl_extend("force", factory.default_opts, opts or {})
 	---@type Ollama.PromptAction
 	local action = {
 		fn = function(prompt)
