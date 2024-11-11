@@ -3,6 +3,7 @@ local factory = {}
 ---@class Ollama.ActionFactoryBuildOpts
 ---@field display boolean? whether to display the response (default: true)
 ---@field insert boolean? whether to insert the response at the cursor (default: false)
+---@field insert_after_selection boolean? whether to insert the response after the previous selection (default: false)
 ---@field replace boolean? whether to replace the selection with the response. Precedes `insert` (default: false)
 ---@field show_prompt boolean? whether to prepend the display buffer with the parsed prompt (default: false)
 ---@field window "float" | "split" | "vsplit" | nil type of window to display the response in (default: "float") (NOT YET IMPLEMENTED)
@@ -11,6 +12,7 @@ local factory = {}
 local default_opts = {
 	display = true,
 	insert = false,
+	insert_after_selection = false,
 	replace = false,
 	show_prompt = false,
 	window = "float",
@@ -32,19 +34,21 @@ function factory.create_action(opts)
 			local out_win
 			local timer
 			local pre_lines
+			local bufnr
+      bufnr = vim.fn.bufnr("%") or 0
 
 			-- stuff for insert
-			local bufnr
-			local cursorLine
+			local insertLine
 			if opts.insert then
-				bufnr = vim.fn.bufnr("%") or 0
-				cursorLine = vim.fn.line(".") or 1
+				insertLine = vim.fn.line(".") or 1
+			end
+			if opts.insert_after_selection then
+				insertLine = vim.api.nvim_buf_get_mark(0, ">")[1] or 1
 			end
 
 			-- stuff for replace
 			local sel_pos
 			if opts.replace then
-				bufnr = vim.fn.bufnr("%") or 0
 				sel_pos = require("ollama.util").get_selection_pos()
 				if sel_pos == nil then
 					vim.api.nvim_notify("No selection found", vim.log.levels.INFO, { title = "Ollama" })
@@ -127,7 +131,7 @@ function factory.create_action(opts)
 						vim.api.nvim_set_option_value("modifiable", false, { buf = out_buf })
 					end
 
-					if opts.insert or opts.replace then
+					if opts.insert or opts.insert_after_selection or opts.replace then
 						local text = table.concat(lines, "\n")
 						if prompt.extract then
 							text = text:match(prompt.extract)
@@ -143,8 +147,8 @@ function factory.create_action(opts)
 						if opts.replace then
 							local start_line, start_col, end_line, end_col = unpack(sel_pos)
 							vim.api.nvim_buf_set_text(bufnr, start_line, start_col, end_line, end_col, lines)
-						elseif opts.insert then
-							vim.api.nvim_buf_set_lines(bufnr, cursorLine, cursorLine, false, lines)
+						elseif opts.insert or opts.insert_after_selection then
+							vim.api.nvim_buf_set_lines(bufnr, insertLine, insertLine, false, lines)
 						end
 
 						-- close floating window when done insert/replacing

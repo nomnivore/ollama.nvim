@@ -7,6 +7,8 @@ actions.display = factory.create_action({ display = true, show_prompt = true })
 
 actions.insert = factory.create_action({ display = false, insert = true })
 
+actions.insert_after_selection = factory.create_action({ display = false, insert_after_selection = true })
+
 actions.replace = factory.create_action({ display = false, replace = true })
 
 -- basically a merge of display -> replace actions
@@ -17,6 +19,8 @@ actions.display_replace = factory.create_action({
 })
 
 actions.display_insert = factory.create_action({ insert = true, show_prompt = true })
+
+actions.display_insert_after_selection = factory.create_action({ insert_after_selection = true, show_prompt = true })
 
 -- TODO: remove this as its not used anymore
 -- if you use this in your config, please switch to "display" instead

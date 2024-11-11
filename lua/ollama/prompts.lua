@@ -31,6 +31,13 @@ local prompts = {
 		action = "replace",
 	},
 
+	Comment_Code = {
+		prompt = "Rewrite the following $ftype code."
+			.. response_format
+			.. "\n\n```$ftype\n$sel```",
+		action = "insert_after_selection",
+	},
+
 	Generate_Code = {
 		prompt = "Generate $ftype code that does the following: $input\n\n" .. response_format,
 		action = "insert",

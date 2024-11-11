@@ -202,9 +202,13 @@ the prompt string with context in the following ways:
   - Uses the `extract` pattern to extract the response.
 - `insert`: Insert the response at the current cursor line
   - Uses the `extract` pattern to extract the response.
+- `insert_after_selection`: Insert the response after the previous selection.
+  - Uses the `extract` pattern to extract the response.
 - `display_replace`: Stream and display the response in a floating window, then replace the current selection with the response.
   - Uses the `extract` pattern to extract the response.
 - `display_insert`: Stream and display the response in a floating window, then insert the response at the current cursor line.
+  - Uses the `extract` pattern to extract the response.
+- `display_insert_after_selection`: Stream and display the response in a floating window, then insert the response after the previous selection.
   - Uses the `extract` pattern to extract the response.
 
 Sometimes, you may need functionality that is not provided by
