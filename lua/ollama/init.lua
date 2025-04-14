@@ -91,6 +91,8 @@ M.config = M.default_config()
 
 ---@alias Ollama.StatusEnum "WORKING" | "IDLE"
 
+---@alias Ollama.ServerStatusEnum "UP" | "DOWN"
+
 local jobs = {}
 local jobs_length = 0
 
@@ -453,6 +455,22 @@ function M.run_serve(opts)
 	})
 	serve_job:start()
 	-- TODO: can we check if the server started successfully from this job?
+end
+
+-- Query the status of the Ollama server
+--- @type fun(): Ollama.ServerStatusEnum
+function M.server_status()
+    local status = "DOWN"
+    local query_job = require("plenary.job"):new({
+        command = "ollama",
+        args =  { "list" },
+        on_exit = function(_, code)
+            if code == 0 then
+                status = "UP"
+            end
+        end
+    }):sync()
+    return status
 end
 
 -- Stop the ollama server
