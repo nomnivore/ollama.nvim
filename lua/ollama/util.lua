@@ -44,7 +44,10 @@ function util.show_spinner(bufnr, opts)
 		100,
 		vim.schedule_wrap(function()
 			spinner_lines = vim.split(opts.format:format(spinner_chars[curr_char]), "\n")
-			vim.api.nvim_buf_set_lines(bufnr, opts.start_ln, opts.end_ln, false, spinner_lines)
+			local modifiable = vim.api.nvim_buf_get_option(bufnr, 'modifiable')
+			if modifiable then
+				vim.api.nvim_buf_set_lines(bufnr, opts.start_ln, opts.end_ln, false, spinner_lines)
+			end
 			curr_char = curr_char % #spinner_chars + 1
 		end)
 	)
