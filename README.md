@@ -282,36 +282,26 @@ This is used to see if any jobs are currently running. It returns the type
 - `"WORKING"`: One or more jobs are running
 
 You can use this to display a prompt running status in your statusline.
-Here are a few example recipes for [lualine](https://github.com/nvim-lualine/lualine.nvim):
 
-
-#### Assuming you already have lualine set up in your config, and that you are using a package manager that can merge configs
+Here's two example functions to get Ollama's status and wheter the plugin is loaded:
 
 ```lua
-{
-  "nvim-lualine/lualine.nvim",
-  optional = true,
+local function get_ollama_status_icon()
+  local status = require("ollama").status()
 
-  opts = function(_, opts)
-    table.insert(opts.sections.lualine_x, {
-      function()
-        local status = require("ollama").status()
+  if status == "IDLE" then
+    return "󱙺" -- nf-md-robot-outline
+  elseif status == "WORKING" then
+    return "󰚩" -- nf-md-robot
+  end
+end
 
-        if status == "IDLE" then
-          return "󱙺" -- nf-md-robot-outline
-        elseif status == "WORKING" then
-          return "󰚩" -- nf-md-robot
-        end
-      end,
-      cond = function()
-        return package.loaded["ollama"] and require("ollama").status() ~= nil
-      end,
-    })
-  end,
-},
+local function is_ollama_loaded()
+  return package.loaded["ollama"] and require("ollama").status() ~= nil
+end
 ```
 
-#### Alternatively, Assuming you want all of the statusline config entries in one file.
+You can use these functions with [lualine](https://github.com/nvim-lualine/lualine.nvim) for example:
 
 ```lua
 -- assuming the following plugin is installed
@@ -319,22 +309,7 @@ Here are a few example recipes for [lualine](https://github.com/nvim-lualine/lua
   "nvim-lualine/lualine.nvim",
 },
 
--- Define a function to check that ollama is installed and working
-local function get_condition()
-    return package.loaded["ollama"] and require("ollama").status ~= nil
-end
-
-
--- Define a function to check the status and return the corresponding icon
-local function get_status_icon()
-  local status = require("ollama").status()
-
-  if status == "IDLE" then
-    return "OLLAMA IDLE"
-  elseif status == "WORKING" then
-    return "OLLAMA BUSY"
-  end
-end
+-- assuming the functions above have been defined
 
 -- Load and configure 'lualine'
 require("lualine").setup({
@@ -342,11 +317,45 @@ require("lualine").setup({
 		lualine_a = {},
 		lualine_b = { "branch", "diff", "diagnostics" },
 		lualine_c = { { "filename", path = 1 } },
-		lualine_x = { get_status_icon, get_condition },
+		lualine_x = { get_ollama_status_icon, is_ollama_loaded },
 		lualine_y = { "progress" },
 		lualine_z = { "location" },
 	},
 })
+```
+
+Or with [Mini.statusline](https://github.com/nvim-mini/mini.nvim/blob/main/readmes/mini-statusline.md):
+
+```lua
+-- cf https://github.com/nvim-mini/mini.nvim/discussions/819
+local active_content = function()
+  local mode, mode_hl = MiniStatusline.section_mode { trunc_width = 120 }
+  local git = MiniStatusline.section_git { trunc_width = 75 }
+  local diagnostics = MiniStatusline.section_diagnostics { trunc_width = 75 }
+  local filename = MiniStatusline.section_filename { trunc_width = 140 }
+  local fileinfo = MiniStatusline.section_fileinfo { trunc_width = 120 }
+  local location = MiniStatusline.section_location { trunc_width = 75 }
+  local search = MiniStatusline.section_searchcount { trunc_width = 75 }
+
+  -- assuming the status function has been defined
+  local ollama_status = get_ollama_status_icon()
+
+  return MiniStatusline.combine_groups {
+    { hl = mode_hl, strings = { mode } },
+    { hl = 'MiniStatuslineDevinfo', strings = { git, diagnostics } },
+    '%<', -- Mark general truncate point
+    { hl = 'MiniStatuslineFilename', strings = { filename } },
+    '%=', -- End left alignment
+    -- add Ollama status to the bar
+    { hl = 'MiniStatuslineFileinfo', strings = { fileinfo, ollama_status } },
+    { hl = mode_hl, strings = { search, location } },
+  }
+end
+require('mini.statusline').setup {
+  content = { active = active_content },
+  -- if you have a Nerd Font
+  use_icons = true,
+}
 ```
 
 ## Credits
